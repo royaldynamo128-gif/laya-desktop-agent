@@ -34,11 +34,11 @@ The agent supports natural phrasing for a wide variety of desktop actions on Arc
 
 | Voice Command | Action | Implementation |
 |---|---|---|
-| "Scroll down" | Scroll page down one step | `wtype -k Page_Down` |
-| "Scroll up twice" | Scroll page up two steps | `wtype -k Page_Up` x2 |
-| "Press Enter" | Press Return key in focused window | `wtype -k Return` |
-| "Press Escape" | Press Escape key | `wtype -k Escape` |
-| "Type this message: Hello world" | Type string into focused input field | `wtype "Hello world"` |
+| "Scroll down" | Scroll page down one step | AT-SPI2 / `wtype -k Page_Down` |
+| "Scroll up twice" | Scroll page up two steps | AT-SPI2 / `wtype -k Page_Up` x2 |
+| "Press Enter" | Press Return key in focused window | AT-SPI2 `Return` / `wtype` |
+| "Press Escape" | Press Escape key | AT-SPI2 `Escape` / `wtype` |
+| "Type this message: Hello world" | Type string into focused input field | AT-SPI2 String synth / `wtype` |
 
 ## 5. Screen & Inspection
 
@@ -57,3 +57,12 @@ The agent supports natural phrasing for a wide variety of desktop actions on Arc
 | "Volume down" | Decrease volume by 10% | `pactl set-sink-volume @DEFAULT_SINK@ -10%` |
 | "Mute audio" | Toggle mute state | `pactl set-sink-mute @DEFAULT_SINK@ toggle` |
 | "Play music" / "Pause music"| Toggle MPRIS media player playback | DBus `org.mpris.MediaPlayer2` |
+
+## 7. Global Hardware Shortcuts (Kernel Evdev)
+
+| Shortcut | Function | Mode |
+|---|---|---|
+| **Win + Alt** (Meta + Alt) | Activate Voice Agent across all apps | Hybrid: Hold (>350ms) = Push-to-Talk, Tap (<350ms) = Toggle |
+| **F12** | Secondary Activation Key | Push-to-Talk / Toggle |
+| **F11** | Emergency Stop | Instant hardware abort, TTS mute, queue purge |
+| `python -m app.cli activate` | Programmatic Activation Trigger | Can be bound to any custom KDE Shortcut |

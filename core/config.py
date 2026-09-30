@@ -56,7 +56,11 @@ class CacheConfig(BaseModel):
 
 
 class InputConfig(BaseModel):
-    ptt_key: str = Field(default="KEY_F12", description="Evdev Push-to-Talk keycode")
+    shortcut: str = Field(default="WIN+ALT", description="Global activation shortcut (e.g. WIN+ALT, META+ALT)")
+    ptt_key: str = Field(default="KEY_F12", description="Secondary single-key fallback")
+    activation_mode: Literal["hybrid", "push_to_talk", "toggle"] = Field(
+        default="hybrid", description="Activation mode: 'hybrid' (hold=PTT, tap=toggle), 'push_to_talk', or 'toggle'"
+    )
     emergency_stop_key: str = Field(default="KEY_F11", description="Evdev emergency abort keycode")
     sample_rate: int = Field(default=16000)
     channels: int = Field(default=1)

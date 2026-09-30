@@ -14,7 +14,7 @@ $$\text{Microphone} \longrightarrow \text{WebRTC VAD} \longrightarrow \text{Fast
 * **Sub-35ms Decision Routing**: Uses Convai Laya (`laya.Router`), a non-autoregressive "System 1" model that evaluates intent, safety tiers, and observation requirements in a single forward pass (~32.89 ms hot-path inference on CUDA).
 * **Strict VRAM Guardrails**: Built for a 6 GB VRAM budget (RTX 3050). The agent never exceeds ~1.3–1.9 GB of VRAM, preserving >4.2 GB of free headroom for your desktop, browser, and games.
 * **Wayland & KDE Plasma 6 Native**: Uses `/usr/local/bin/kdotool` for window manipulation, AT-SPI2 (`PyGObject`) for UI accessibility inspection, FreeDesktop/KDE DBus for notifications and MPRIS media playback, and `gtk-launch` for native/flatpak applications.
-* **Push-to-Talk First**: Global hardware key capture via Linux `evdev` (`KEY_F12`), completely bypassing Wayland key-grab restrictions with zero input latency.
+* **Universal Global Shortcut (`Win + Alt`)**: Global hardware key capture via Linux `evdev` (`KEY_LEFTMETA`/`KEY_RIGHTMETA` + `KEY_LEFTALT`/`KEY_RIGHTALT`), completely bypassing Wayland key-grab restrictions with zero input latency across all applications. Supports **Hybrid Mode** (Hold >350ms = Push-to-Talk, Tap <350ms = Toggle).
 * **Instant Emergency Stop**: Hardware-latched global abort key (`KEY_F11` / `Ctrl+Alt+Escape`) that immediately cancels tools, drops action queues, and mutes speech.
 * **Zero Host Pollution**: Entire project, virtualenv, models, logs, and caches reside in this single directory (`~/Projects/laya-desktop-agent/`).
 

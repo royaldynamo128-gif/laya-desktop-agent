@@ -118,8 +118,10 @@ class LayaDaemon:
 
         # 7. Global Key Listener
         self.ptt_listener = PTTListener(
+            shortcut=config.input.shortcut,
             ptt_key_name=config.input.ptt_key,
             estop_key_name=config.input.emergency_stop_key,
+            activation_mode=config.input.activation_mode,
             on_press=self._on_ptt_press,
             on_release=self._on_ptt_release,
             on_estop=self._on_estop_press,
@@ -160,14 +162,16 @@ class LayaDaemon:
             return False
 
     def _on_ptt_press(self) -> None:
-        """Called when user presses and holds Push-to-Talk key."""
+        """Called when user presses activation shortcut (e.g. Win + Alt)."""
         if self.emergency_stop.is_stopped():
-            logger.warning("Ignoring PTT: Agent is in Emergency Stop state.")
+            logger.warning("Ignoring shortcut: Agent is in Emergency Stop state.")
             return
 
-        logger.info("Push-to-Talk active: recording...")
-        self.state_mgr.set_state(AgentState.LISTENING, reason="PTT key down")
+        logger.info("Voice Agent active: recording (%s)...", self.config.input.shortcut)
+        self.state_mgr.set_state(AgentState.LISTENING, reason="Shortcut activated")
         self.audio_capture.start()
+        # Fast visual desktop feedback
+        self.dbus.show_notification("Laya Agent", f"🎤 Listening... ({self.config.input.shortcut})", timeout_ms=2000)
 
     def _on_ptt_release(self) -> None:
         """Called when user releases Push-to-Talk key."""
@@ -203,6 +207,10 @@ class LayaDaemon:
         # Setup OS signal handlers
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
+        try:
+            signal.signal(signal.SIGUSR1, self._handle_sigusr1)
+        except Exception:
+            pass
 
         # Pre-warm models
         self.model_mgr.warm_models()
@@ -213,9 +221,15 @@ class LayaDaemon:
 
         self._running = True
         self.state_mgr.set_state(AgentState.IDLE, reason="Daemon started")
-        self.dbus.show_notification("Laya Agent", "Voice Desktop Agent Online & Ready (F12 = Talk, F11 = Stop)")
+        self.dbus.show_notification(
+            "Laya Agent",
+            f"Voice Desktop Agent Online ({self.config.input.shortcut} = Talk, F11 = Stop)",
+        )
 
-        logger.info("Laya Desktop Agent is running. Hold F12 to talk, F11 for Emergency Stop.")
+        logger.info(
+            "Laya Desktop Agent is running. Press %s to talk (or F12), F11 for Emergency Stop.",
+            self.config.input.shortcut,
+        )
 
         try:
             while self._running:
@@ -226,6 +240,10 @@ class LayaDaemon:
             pass
         finally:
             self.stop()
+
+    def _handle_sigusr1(self, signum, frame):
+        logger.info("Received SIGUSR1: External activation trigger.")
+        self.ptt_listener.trigger_activation()
 
     def _handle_signal(self, signum, frame):
         logger.info("Received termination signal (%d). Shutting down cleanly...", signum)

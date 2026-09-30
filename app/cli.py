@@ -158,6 +158,25 @@ def status():
 
 
 @cli.command()
+def activate():
+    """Trigger voice listening on the running background daemon (via Win+Alt or CLI)."""
+    runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
+    lock_path = runtime_dir / "laya_voice_agent.lock"
+
+    if not lock_path.exists():
+        console.print("[yellow]Daemon is not running. Start it with './scripts/start.sh'.[/yellow]")
+        return
+
+    try:
+        with open(lock_path, "r") as f:
+            pid = int(f.read().strip())
+        os.kill(pid, signal.SIGUSR1)
+        console.print(f"[green]Sent activation signal to daemon PID {pid}.[/green]")
+    except Exception as e:
+        console.print(f"[red]Failed to signal daemon: {e}[/red]")
+
+
+@cli.command()
 def stop():
     """Stop running background daemon."""
     runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))

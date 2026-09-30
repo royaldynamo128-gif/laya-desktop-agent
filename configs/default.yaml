@@ -40,6 +40,8 @@ cache:
   cleanup_interval_sec: 60
 
 input:
+  shortcut: WIN+ALT
+  activation_mode: hybrid
   ptt_key: KEY_F12
   emergency_stop_key: KEY_F11
   sample_rate: 16000
