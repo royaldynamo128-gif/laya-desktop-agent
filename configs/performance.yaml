@@ -1,0 +1,18 @@
+profile: performance
+
+stt:
+  model_size: large-v3
+  device: cuda
+  compute_type: float16
+  idle_timeout_sec: 600
+
+laya:
+  model_id: convai-innovations/laya-large-en
+  device: cuda
+  compute_type: float16
+  idle_timeout_sec: 600
+
+vram:
+  max_agent_vram_mb: 3072
+  warning_threshold_pct: 80.0
+  critical_threshold_pct: 90.0

@@ -1,0 +1,20 @@
+[Unit]
+Description=Laya Local Voice-Controlled Desktop Agent
+After=graphical-session.target pipewire.service
+Wants=pipewire.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rai/Projects/laya-desktop-agent
+Environment="PATH=/home/rai/Projects/laya-desktop-agent/.venv/bin:/home/rai/.local/bin:/usr/local/bin:/usr/bin"
+Environment="PYTHONUNBUFFERED=1"
+Environment="WAYLAND_DISPLAY=wayland-0"
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
+Environment="XDG_SESSION_TYPE=wayland"
+Environment="XDG_CURRENT_DESKTOP=KDE"
+ExecStart=/home/rai/Projects/laya-desktop-agent/.venv/bin/python -m app.cli run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,554 @@
+{
+  "apps": {
+    "org.kde.kdenlive.desktop": {
+      "name": "Kdenlive",
+      "exec": "kdenlive %F",
+      "path": "/usr/share/applications/org.kde.kdenlive.desktop",
+      "basename": "org.kde.kdenlive.desktop"
+    },
+    "uxterm.desktop": {
+      "name": "UXTerm",
+      "exec": "uxterm",
+      "path": "/usr/share/applications/uxterm.desktop",
+      "basename": "uxterm.desktop"
+    },
+    "assistant.desktop": {
+      "name": "Qt Assistant",
+      "exec": "assistant6",
+      "path": "/usr/share/applications/assistant.desktop",
+      "basename": "assistant.desktop"
+    },
+    "org.kde.kmenuedit.desktop": {
+      "name": "Menu Editor",
+      "exec": "kmenuedit",
+      "path": "/usr/share/applications/org.kde.kmenuedit.desktop",
+      "basename": "org.kde.kmenuedit.desktop"
+    },
+    "kdesystemsettings.desktop": {
+      "name": "KDE System Settings",
+      "exec": "systemsettings",
+      "path": "/usr/share/applications/kdesystemsettings.desktop",
+      "basename": "kdesystemsettings.desktop"
+    },
+    "org.kde.kwrite.desktop": {
+      "name": "KWrite",
+      "exec": "kwrite %U",
+      "path": "/usr/share/applications/org.kde.kwrite.desktop",
+      "basename": "org.kde.kwrite.desktop"
+    },
+    "io.github.gnhen.midscroll.Settings.desktop": {
+      "name": "midscroll Settings",
+      "exec": "midscroll-settings",
+      "path": "/usr/share/applications/io.github.gnhen.midscroll.Settings.desktop",
+      "basename": "io.github.gnhen.midscroll.Settings.desktop"
+    },
+    "org.kde.kdeconnect.app.desktop": {
+      "name": "KDE Connect",
+      "exec": "kdeconnect-app",
+      "path": "/usr/share/applications/org.kde.kdeconnect.app.desktop",
+      "basename": "org.kde.kdeconnect.app.desktop"
+    },
+    "org.kde.kdeconnect.nonplasma.desktop": {
+      "name": "KDE Connect Indicator",
+      "exec": "kdeconnect-indicator",
+      "path": "/usr/share/applications/org.kde.kdeconnect.nonplasma.desktop",
+      "basename": "org.kde.kdeconnect.nonplasma.desktop"
+    },
+    "opera.desktop": {
+      "name": "Opera",
+      "exec": "opera %U",
+      "path": "/usr/share/applications/opera.desktop",
+      "basename": "opera.desktop"
+    },
+    "bvnc.desktop": {
+      "name": "Avahi VNC Server Browser",
+      "exec": "/usr/bin/bvnc",
+      "path": "/usr/share/applications/bvnc.desktop",
+      "basename": "bvnc.desktop"
+    },
+    "brave-browser.desktop": {
+      "name": "Brave",
+      "exec": "brave %U",
+      "path": "/usr/share/applications/brave-browser.desktop",
+      "basename": "brave-browser.desktop"
+    },
+    "htop.desktop": {
+      "name": "Htop",
+      "exec": "htop",
+      "path": "/usr/share/applications/htop.desktop",
+      "basename": "htop.desktop"
+    },
+    "blender.desktop": {
+      "name": "Blender",
+      "exec": "blender %f",
+      "path": "/usr/share/applications/blender.desktop",
+      "basename": "blender.desktop"
+    },
+    "org.kde.spectacle.desktop": {
+      "name": "Spectacle",
+      "exec": "/usr/bin/spectacle",
+      "path": "/usr/share/applications/org.kde.spectacle.desktop",
+      "basename": "org.kde.spectacle.desktop"
+    },
+    "org.kde.discover.desktop": {
+      "name": "Discover",
+      "exec": "plasma-discover %F",
+      "path": "/usr/share/applications/org.kde.discover.desktop",
+      "basename": "org.kde.discover.desktop"
+    },
+    "cmake-gui.desktop": {
+      "name": "CMake",
+      "exec": "cmake-gui %f",
+      "path": "/usr/share/applications/cmake-gui.desktop",
+      "basename": "cmake-gui.desktop"
+    },
+    "qvidcap.desktop": {
+      "name": "Qt V4L2 video capture utility",
+      "exec": "qvidcap",
+      "path": "/usr/share/applications/qvidcap.desktop",
+      "basename": "qvidcap.desktop"
+    },
+    "qdbusviewer.desktop": {
+      "name": "Qt D-Bus Viewer",
+      "exec": "qdbusviewer6",
+      "path": "/usr/share/applications/qdbusviewer.desktop",
+      "basename": "qdbusviewer.desktop"
+    },
+    "org.pulseaudio.pavucontrol.desktop": {
+      "name": "Volume Control",
+      "exec": "pavucontrol",
+      "path": "/usr/share/applications/org.pulseaudio.pavucontrol.desktop",
+      "basename": "org.pulseaudio.pavucontrol.desktop"
+    },
+    "org.kde.kdeconnect.sms.desktop": {
+      "name": "KDE Connect SMS",
+      "exec": "kdeconnect-sms",
+      "path": "/usr/share/applications/org.kde.kdeconnect.sms.desktop",
+      "basename": "org.kde.kdeconnect.sms.desktop"
+    },
+    "org.kde.ark.desktop": {
+      "name": "Ark",
+      "exec": "ark %U",
+      "path": "/usr/share/applications/org.kde.ark.desktop",
+      "basename": "org.kde.ark.desktop"
+    },
+    "vim.desktop": {
+      "name": "Vim",
+      "exec": "vim %F",
+      "path": "/usr/share/applications/vim.desktop",
+      "basename": "vim.desktop"
+    },
+    "com.github.wwmm.easyeffects.desktop": {
+      "name": "Easy Effects",
+      "exec": "easyeffects",
+      "path": "/usr/share/applications/com.github.wwmm.easyeffects.desktop",
+      "basename": "com.github.wwmm.easyeffects.desktop"
+    },
+    "linguist.desktop": {
+      "name": "Qt Linguist",
+      "exec": "linguist6 %F",
+      "path": "/usr/share/applications/linguist.desktop",
+      "basename": "linguist.desktop"
+    },
+    "lstopo.desktop": {
+      "name": "Hardware Locality lstopo",
+      "exec": "lstopo",
+      "path": "/usr/share/applications/lstopo.desktop",
+      "basename": "lstopo.desktop"
+    },
+    "org.kde.plasma-welcome.desktop": {
+      "name": "Welcome Center",
+      "exec": "plasma-welcome",
+      "path": "/usr/share/applications/org.kde.plasma-welcome.desktop",
+      "basename": "org.kde.plasma-welcome.desktop"
+    },
+    "nm-connection-editor.desktop": {
+      "name": "Advanced Network Configuration",
+      "exec": "nm-connection-editor",
+      "path": "/usr/share/applications/nm-connection-editor.desktop",
+      "basename": "nm-connection-editor.desktop"
+    },
+    "qv4l2.desktop": {
+      "name": "Qt V4L2 test Utility",
+      "exec": "qv4l2",
+      "path": "/usr/share/applications/qv4l2.desktop",
+      "basename": "qv4l2.desktop"
+    },
+    "org.kde.dolphin.desktop": {
+      "name": "Dolphin",
+      "exec": "dolphin %u",
+      "path": "/usr/share/applications/org.kde.dolphin.desktop",
+      "basename": "org.kde.dolphin.desktop"
+    },
+    "org.kde.plasma.emojier.desktop": {
+      "name": "Emoji Selector",
+      "exec": "plasma-emojier",
+      "path": "/usr/share/applications/org.kde.plasma.emojier.desktop",
+      "basename": "org.kde.plasma.emojier.desktop"
+    },
+    "com.mitchellh.ghostty.desktop": {
+      "name": "Ghostty",
+      "exec": "/usr/bin/ghostty --gtk-single-instance=true",
+      "path": "/usr/share/applications/com.mitchellh.ghostty.desktop",
+      "basename": "com.mitchellh.ghostty.desktop"
+    },
+    "nemo.desktop": {
+      "name": "Files",
+      "exec": "nemo %U",
+      "path": "/usr/share/applications/nemo.desktop",
+      "basename": "nemo.desktop"
+    },
+    "mpv.desktop": {
+      "name": "mpv Media Player",
+      "exec": "mpv --player-operation-mode=pseudo-gui -- %U",
+      "path": "/usr/share/applications/mpv.desktop",
+      "basename": "mpv.desktop"
+    },
+    "org.kde.drkonqi.coredump.gui.desktop": {
+      "name": "Crashed Processes Viewer",
+      "exec": "drkonqi-coredump-gui",
+      "path": "/usr/share/applications/org.kde.drkonqi.coredump.gui.desktop",
+      "basename": "org.kde.drkonqi.coredump.gui.desktop"
+    },
+    "org.kde.kcalc.desktop": {
+      "name": "KCalc",
+      "exec": "kcalc",
+      "path": "/usr/share/applications/org.kde.kcalc.desktop",
+      "basename": "org.kde.kcalc.desktop"
+    },
+    "bssh.desktop": {
+      "name": "Avahi SSH Server Browser",
+      "exec": "/usr/bin/bssh",
+      "path": "/usr/share/applications/bssh.desktop",
+      "basename": "bssh.desktop"
+    },
+    "designer.desktop": {
+      "name": "Qt Widgets Designer",
+      "exec": "designer6 %F",
+      "path": "/usr/share/applications/designer.desktop",
+      "basename": "designer.desktop"
+    },
+    "xterm.desktop": {
+      "name": "XTerm",
+      "exec": "xterm",
+      "path": "/usr/share/applications/xterm.desktop",
+      "basename": "xterm.desktop"
+    },
+    "org.kde.plasma-systemmonitor.desktop": {
+      "name": "System Monitor",
+      "exec": "plasma-systemmonitor",
+      "path": "/usr/share/applications/org.kde.plasma-systemmonitor.desktop",
+      "basename": "org.kde.plasma-systemmonitor.desktop"
+    },
+    "org.kde.konsole.desktop": {
+      "name": "Konsole",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=konsole org.kde.konsole",
+      "path": "/var/lib/flatpak/exports/share/applications/org.kde.konsole.desktop",
+      "basename": "org.kde.konsole.desktop"
+    },
+    "kitty.desktop": {
+      "name": "kitty",
+      "exec": "kitty",
+      "path": "/usr/share/applications/kitty.desktop",
+      "basename": "kitty.desktop"
+    },
+    "systemsettings.desktop": {
+      "name": "System Settings",
+      "exec": "systemsettings",
+      "path": "/usr/share/applications/systemsettings.desktop",
+      "basename": "systemsettings.desktop"
+    },
+    "org.kde.kate.desktop": {
+      "name": "Kate",
+      "exec": "kate -b %U",
+      "path": "/usr/share/applications/org.kde.kate.desktop",
+      "basename": "org.kde.kate.desktop"
+    },
+    "org.kde.kinfocenter.desktop": {
+      "name": "Info Center",
+      "exec": "kinfocenter",
+      "path": "/usr/share/applications/org.kde.kinfocenter.desktop",
+      "basename": "org.kde.kinfocenter.desktop"
+    },
+    "org.kde.gwenview.desktop": {
+      "name": "Gwenview",
+      "exec": "env QT_IMAGEIO_MAXALLOC=4096 gwenview %U",
+      "path": "/home/rai/.local/share/applications/org.kde.gwenview.desktop",
+      "basename": "org.kde.gwenview.desktop"
+    },
+    "avahi-discover.desktop": {
+      "name": "Avahi Zeroconf Browser",
+      "exec": "/usr/bin/avahi-discover",
+      "path": "/usr/share/applications/avahi-discover.desktop",
+      "basename": "avahi-discover.desktop"
+    },
+    "org.videolan.VLC.desktop": {
+      "name": "VLC media player",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/vlc --file-forwarding org.videolan.VLC --started-from-file @@u %U @@",
+      "path": "/var/lib/flatpak/exports/share/applications/org.videolan.VLC.desktop",
+      "basename": "org.videolan.VLC.desktop"
+    },
+    "org.chromium.Chromium.desktop": {
+      "name": "Chromium",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/chromium --file-forwarding org.chromium.Chromium @@u %U @@",
+      "path": "/var/lib/flatpak/exports/share/applications/org.chromium.Chromium.desktop",
+      "basename": "org.chromium.Chromium.desktop"
+    },
+    "md.obsidian.Obsidian.desktop": {
+      "name": "Obsidian",
+      "exec": "/home/rai/.local/bin/open-in-obsidian %u",
+      "path": "/home/rai/.local/share/applications/md.obsidian.Obsidian.desktop",
+      "basename": "md.obsidian.Obsidian.desktop"
+    },
+    "org.gnome.Snapshot.desktop": {
+      "name": "Camera",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=snapshot org.gnome.Snapshot",
+      "path": "/home/rai/.local/share/applications/org.gnome.Snapshot.desktop",
+      "basename": "org.gnome.Snapshot.desktop"
+    },
+    "com.heroicgameslauncher.hgl.desktop": {
+      "name": "Heroic Games Launcher",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=heroic-run --file-forwarding com.heroicgameslauncher.hgl @@u %u @@",
+      "path": "/var/lib/flatpak/exports/share/applications/com.heroicgameslauncher.hgl.desktop",
+      "basename": "com.heroicgameslauncher.hgl.desktop"
+    },
+    "io.speedofsound.SpeedOfSound.desktop": {
+      "name": "Speed of Sound",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=speedofsound io.speedofsound.SpeedOfSound",
+      "path": "/var/lib/flatpak/exports/share/applications/io.speedofsound.SpeedOfSound.desktop",
+      "basename": "io.speedofsound.SpeedOfSound.desktop"
+    },
+    "com.valvesoftware.Steam.desktop": {
+      "name": "Steam",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/steam --file-forwarding com.valvesoftware.Steam @@u %U @@",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/com.valvesoftware.Steam.desktop",
+      "basename": "com.valvesoftware.Steam.desktop"
+    },
+    "net.ankiweb.Anki.desktop": {
+      "name": "Anki",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=anki --file-forwarding net.ankiweb.Anki @@ %f @@",
+      "path": "/var/lib/flatpak/exports/share/applications/net.ankiweb.Anki.desktop",
+      "basename": "net.ankiweb.Anki.desktop"
+    },
+    "com.google.Chrome.desktop": {
+      "name": "Google Chrome",
+      "exec": "flatpak run com.google.Chrome --load-extension=/home/rai/.var/app/com.google.Chrome/config/comix-to-fix-extension %U",
+      "path": "/home/rai/.local/share/applications/com.google.Chrome.desktop",
+      "basename": "com.google.Chrome.desktop"
+    },
+    "org.upscayl.Upscayl.desktop": {
+      "name": "Upscayl",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=upscayl-run --file-forwarding org.upscayl.Upscayl @@u %U @@",
+      "path": "/var/lib/flatpak/exports/share/applications/org.upscayl.Upscayl.desktop",
+      "basename": "org.upscayl.Upscayl.desktop"
+    },
+    "io.github.shiftey.Desktop.desktop": {
+      "name": "GitHub Desktop",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=start-github-desktop --file-forwarding io.github.shiftey.Desktop @@u %U @@",
+      "path": "/var/lib/flatpak/exports/share/applications/io.github.shiftey.Desktop.desktop",
+      "basename": "io.github.shiftey.Desktop.desktop"
+    },
+    "voice_type_toggle.desktop": {
+      "name": "Toggle Voice Dictation",
+      "exec": "/bin/bash /home/rai/Projects/voice-type/voice_type_toggle.sh",
+      "path": "/home/rai/.local/share/applications/voice_type_toggle.desktop",
+      "basename": "voice_type_toggle.desktop"
+    },
+    "antigravity-ide.desktop": {
+      "name": "Antigravity IDE",
+      "exec": "\"/home/rai/Applications/Antigravity IDE/antigravity-ide\" %U",
+      "path": "/home/rai/.local/share/applications/antigravity-ide.desktop",
+      "basename": "antigravity-ide.desktop"
+    },
+    "mouse-speed-booster.desktop": {
+      "name": "Mouse Speed Booster",
+      "exec": "/home/rai/.local/bin/mouse-speed-booster",
+      "path": "/home/rai/.local/share/applications/mouse-speed-booster.desktop",
+      "basename": "mouse-speed-booster.desktop"
+    },
+    "hermes-desktop.desktop": {
+      "name": "Hermes One",
+      "exec": "/home/rai/Applications/hermes-desktop/AppRun --no-sandbox %U",
+      "path": "/home/rai/.local/share/applications/hermes-desktop.desktop",
+      "basename": "hermes-desktop.desktop"
+    },
+    "sync-browser-google-accounts.desktop": {
+      "name": "Sync Browser Google Accounts",
+      "exec": "/home/rai/.local/bin/sync-browser-google-accounts",
+      "path": "/home/rai/.local/share/applications/sync-browser-google-accounts.desktop",
+      "basename": "sync-browser-google-accounts.desktop"
+    },
+    "voice_type_upgrade.desktop": {
+      "name": "Voice Type \u2014 Upgrade Version",
+      "exec": "konsole --hold -e bash /home/rai/Scripts/voice_type_upgrade.sh",
+      "path": "/home/rai/.local/share/applications/voice_type_upgrade.desktop",
+      "basename": "voice_type_upgrade.desktop"
+    },
+    "antigravity.desktop": {
+      "name": "Antigravity",
+      "exec": "\"/home/rai/Applications/Antigravity-x64/antigravity\" %U",
+      "path": "/home/rai/.local/share/applications/antigravity.desktop",
+      "basename": "antigravity.desktop"
+    },
+    "polonium-settings.desktop": {
+      "name": "Polonium Settings",
+      "exec": "qdbus6 org.kde.kglobalaccel /component/kwin invokeShortcut \"PoloniumToggleSettingsMenu\"",
+      "path": "/home/rai/.local/share/applications/polonium-settings.desktop",
+      "basename": "polonium-settings.desktop"
+    },
+    "org.telegram.desktop.desktop": {
+      "name": "Telegram",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=Telegram --file-forwarding org.telegram.desktop -- @@u %U @@",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/org.telegram.desktop.desktop",
+      "basename": "org.telegram.desktop.desktop"
+    },
+    "io.github.denysmb.unify.desktop": {
+      "name": "Unify",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=unify io.github.denysmb.unify",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/io.github.denysmb.unify.desktop",
+      "basename": "io.github.denysmb.unify.desktop"
+    },
+    "org.mozilla.firefox.desktop": {
+      "name": "Firefox",
+      "exec": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=firefox --file-forwarding org.mozilla.firefox @@u %u @@",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/org.mozilla.firefox.desktop",
+      "basename": "org.mozilla.firefox.desktop"
+    }
+  },
+  "name_map": {
+    "kdenlive": "org.kde.kdenlive.desktop",
+    "org.kde.kdenlive": "org.kde.kdenlive.desktop",
+    "uxterm": "uxterm.desktop",
+    "qt assistant": "assistant.desktop",
+    "assistant": "assistant.desktop",
+    "menu editor": "org.kde.kmenuedit.desktop",
+    "org.kde.kmenuedit": "org.kde.kmenuedit.desktop",
+    "kde system settings": "kdesystemsettings.desktop",
+    "kdesystemsettings": "kdesystemsettings.desktop",
+    "kwrite": "org.kde.kwrite.desktop",
+    "org.kde.kwrite": "org.kde.kwrite.desktop",
+    "midscroll settings": "io.github.gnhen.midscroll.Settings.desktop",
+    "io.github.gnhen.midscroll.settings": "io.github.gnhen.midscroll.Settings.desktop",
+    "kde connect": "org.kde.kdeconnect.app.desktop",
+    "org.kde.kdeconnect.app": "org.kde.kdeconnect.app.desktop",
+    "kde connect indicator": "org.kde.kdeconnect.nonplasma.desktop",
+    "org.kde.kdeconnect.nonplasma": "org.kde.kdeconnect.nonplasma.desktop",
+    "opera": "opera.desktop",
+    "avahi vnc server browser": "bvnc.desktop",
+    "bvnc": "bvnc.desktop",
+    "brave": "brave-browser.desktop",
+    "brave-browser": "brave-browser.desktop",
+    "htop": "htop.desktop",
+    "blender": "blender.desktop",
+    "spectacle": "org.kde.spectacle.desktop",
+    "org.kde.spectacle": "org.kde.spectacle.desktop",
+    "discover": "org.kde.discover.desktop",
+    "org.kde.discover": "org.kde.discover.desktop",
+    "cmake": "cmake-gui.desktop",
+    "cmake-gui": "cmake-gui.desktop",
+    "qt v4l2 video capture utility": "qvidcap.desktop",
+    "qvidcap": "qvidcap.desktop",
+    "qt d-bus viewer": "qdbusviewer.desktop",
+    "qdbusviewer": "qdbusviewer.desktop",
+    "volume control": "org.pulseaudio.pavucontrol.desktop",
+    "org.pulseaudio.pavucontrol": "org.pulseaudio.pavucontrol.desktop",
+    "kde connect sms": "org.kde.kdeconnect.sms.desktop",
+    "org.kde.kdeconnect.sms": "org.kde.kdeconnect.sms.desktop",
+    "ark": "org.kde.ark.desktop",
+    "org.kde.ark": "org.kde.ark.desktop",
+    "vim": "vim.desktop",
+    "easy effects": "com.github.wwmm.easyeffects.desktop",
+    "com.github.wwmm.easyeffects": "com.github.wwmm.easyeffects.desktop",
+    "qt linguist": "linguist.desktop",
+    "linguist": "linguist.desktop",
+    "hardware locality lstopo": "lstopo.desktop",
+    "lstopo": "lstopo.desktop",
+    "welcome center": "org.kde.plasma-welcome.desktop",
+    "org.kde.plasma-welcome": "org.kde.plasma-welcome.desktop",
+    "advanced network configuration": "nm-connection-editor.desktop",
+    "nm-connection-editor": "nm-connection-editor.desktop",
+    "qt v4l2 test utility": "qv4l2.desktop",
+    "qv4l2": "qv4l2.desktop",
+    "dolphin": "org.kde.dolphin.desktop",
+    "org.kde.dolphin": "org.kde.dolphin.desktop",
+    "emoji selector": "org.kde.plasma.emojier.desktop",
+    "org.kde.plasma.emojier": "org.kde.plasma.emojier.desktop",
+    "ghostty": "com.mitchellh.ghostty.desktop",
+    "com.mitchellh.ghostty": "com.mitchellh.ghostty.desktop",
+    "files": "org.kde.dolphin.desktop",
+    "nemo": "nemo.desktop",
+    "mpv media player": "mpv.desktop",
+    "mpv": "mpv.desktop",
+    "crashed processes viewer": "org.kde.drkonqi.coredump.gui.desktop",
+    "org.kde.drkonqi.coredump.gui": "org.kde.drkonqi.coredump.gui.desktop",
+    "kcalc": "org.kde.kcalc.desktop",
+    "org.kde.kcalc": "org.kde.kcalc.desktop",
+    "avahi ssh server browser": "bssh.desktop",
+    "bssh": "bssh.desktop",
+    "qt widgets designer": "designer.desktop",
+    "designer": "designer.desktop",
+    "xterm": "xterm.desktop",
+    "system monitor": "org.kde.plasma-systemmonitor.desktop",
+    "org.kde.plasma-systemmonitor": "org.kde.plasma-systemmonitor.desktop",
+    "konsole": "org.kde.konsole.desktop",
+    "org.kde.konsole": "org.kde.konsole.desktop",
+    "kitty": "kitty.desktop",
+    "system settings": "systemsettings.desktop",
+    "systemsettings": "systemsettings.desktop",
+    "kate": "org.kde.kate.desktop",
+    "org.kde.kate": "org.kde.kate.desktop",
+    "info center": "org.kde.kinfocenter.desktop",
+    "org.kde.kinfocenter": "org.kde.kinfocenter.desktop",
+    "gwenview": "org.kde.gwenview.desktop",
+    "org.kde.gwenview": "org.kde.gwenview.desktop",
+    "avahi zeroconf browser": "avahi-discover.desktop",
+    "avahi-discover": "avahi-discover.desktop",
+    "vlc media player": "org.videolan.VLC.desktop",
+    "org.videolan.vlc": "org.videolan.VLC.desktop",
+    "chromium": "org.chromium.Chromium.desktop",
+    "org.chromium.chromium": "org.chromium.Chromium.desktop",
+    "obsidian": "md.obsidian.Obsidian.desktop",
+    "md.obsidian.obsidian": "md.obsidian.Obsidian.desktop",
+    "camera": "org.gnome.Snapshot.desktop",
+    "org.gnome.snapshot": "org.gnome.Snapshot.desktop",
+    "heroic games launcher": "com.heroicgameslauncher.hgl.desktop",
+    "com.heroicgameslauncher.hgl": "com.heroicgameslauncher.hgl.desktop",
+    "speed of sound": "io.speedofsound.SpeedOfSound.desktop",
+    "io.speedofsound.speedofsound": "io.speedofsound.SpeedOfSound.desktop",
+    "steam": "com.valvesoftware.Steam.desktop",
+    "com.valvesoftware.steam": "com.valvesoftware.Steam.desktop",
+    "anki": "net.ankiweb.Anki.desktop",
+    "net.ankiweb.anki": "net.ankiweb.Anki.desktop",
+    "google chrome": "com.google.Chrome.desktop",
+    "com.google.chrome": "com.google.Chrome.desktop",
+    "upscayl": "org.upscayl.Upscayl.desktop",
+    "org.upscayl.upscayl": "org.upscayl.Upscayl.desktop",
+    "github desktop": "io.github.shiftey.Desktop.desktop",
+    "io.github.shiftey.desktop": "io.github.shiftey.Desktop.desktop",
+    "toggle voice dictation": "voice_type_toggle.desktop",
+    "voice_type_toggle": "voice_type_toggle.desktop",
+    "antigravity ide": "antigravity-ide.desktop",
+    "antigravity-ide": "antigravity-ide.desktop",
+    "mouse speed booster": "mouse-speed-booster.desktop",
+    "mouse-speed-booster": "mouse-speed-booster.desktop",
+    "hermes one": "hermes-desktop.desktop",
+    "hermes-desktop": "hermes-desktop.desktop",
+    "sync browser google accounts": "sync-browser-google-accounts.desktop",
+    "sync-browser-google-accounts": "sync-browser-google-accounts.desktop",
+    "voice type \u2014 upgrade version": "voice_type_upgrade.desktop",
+    "voice_type_upgrade": "voice_type_upgrade.desktop",
+    "antigravity": "antigravity.desktop",
+    "polonium settings": "polonium-settings.desktop",
+    "polonium-settings": "polonium-settings.desktop",
+    "telegram": "org.telegram.desktop.desktop",
+    "org.telegram.desktop": "org.telegram.desktop.desktop",
+    "unify": "io.github.denysmb.unify.desktop",
+    "io.github.denysmb.unify": "io.github.denysmb.unify.desktop",
+    "firefox": "org.mozilla.firefox.desktop",
+    "org.mozilla.firefox": "org.mozilla.firefox.desktop",
+    "chrome": "com.google.Chrome.desktop",
+    "terminal": "com.mitchellh.ghostty.desktop",
+    "vlc": "org.videolan.VLC.desktop",
+    "calculator": "org.kde.kcalc.desktop"
+  }
+}

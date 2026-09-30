@@ -1,0 +1,51 @@
+[project]
+name = "laya-desktop-agent"
+version = "0.1.0"
+description = "Production-quality local voice-controlled desktop agent for Arch Linux + KDE Plasma Wayland using Laya decision engine"
+authors = [{ name = "rai" }]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "laya>=0.3.20",
+    "faster-whisper>=1.0.0",
+    "piper-tts>=1.2.0",
+    "sounddevice>=0.4.6",
+    "webrtcvad>=2.0.10",
+    "evdev>=1.7.0",
+    "pynvml>=11.5.0",
+    "nvidia-ml-py>=12.0.0",
+    "setuptools<70",
+    "psutil>=5.9.0",
+    "pydantic>=2.7.0",
+    "pyyaml>=6.0.1",
+    "rich>=13.7.0",
+    "click>=8.1.7",
+    "numpy>=1.26.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "app*",
+    "core*",
+    "models*",
+    "tools*",
+    "integrations*",
+    "audio*",
+    "speech*",
+    "vision*",
+    "execution*",
+    "verification*",
+    "safety*",
+    "monitoring*",
+]
+exclude = ["logs*", "data*", "cache*", "tests*", "configs*", "scripts*", "docs*"]
+
+[project.scripts]
+laya-agent = "app.cli:cli"

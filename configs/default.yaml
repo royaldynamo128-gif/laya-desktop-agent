@@ -1,0 +1,58 @@
+profile: balanced
+
+stt:
+  model_size: small.en
+  device: cuda
+  compute_type: float16
+  idle_timeout_sec: 300
+  language: en
+
+laya:
+  model_id: convai-innovations/laya-large-en
+  device: cuda
+  compute_type: float16
+  idle_timeout_sec: 300
+  confidence_threshold: 0.60
+
+tts:
+  engine: piper
+  voice: en_US-lessac-medium
+  device: cpu
+  playback_volume: 1.0
+  enabled: true
+
+vram:
+  max_agent_vram_mb: 2048
+  warning_threshold_pct: 75.0
+  critical_threshold_pct: 85.0
+  poll_interval_sec: 2.0
+  auto_downgrade: true
+
+ram:
+  max_agent_ram_mb: 3072
+  warning_threshold_pct: 80.0
+  critical_threshold_pct: 90.0
+
+cache:
+  max_cache_mb: 500
+  audio_ttl_sec: 30
+  screenshot_ttl_sec: 60
+  cleanup_interval_sec: 60
+
+input:
+  ptt_key: KEY_F12
+  emergency_stop_key: KEY_F11
+  sample_rate: 16000
+  channels: 1
+  vad_aggressiveness: 3
+
+safety:
+  require_confirmation_high_risk: true
+  require_confirmation_moderate: false
+  max_retries: 3
+  execution_timeout_sec: 15.0
+
+logging:
+  level: INFO
+  max_log_bytes: 5242880
+  backup_count: 3

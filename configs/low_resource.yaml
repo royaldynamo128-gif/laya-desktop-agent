@@ -1,0 +1,24 @@
+profile: low_resource
+
+stt:
+  model_size: tiny.en
+  device: cpu
+  compute_type: int8
+  idle_timeout_sec: 180
+
+laya:
+  model_id: convai-innovations/laya-large-en
+  device: cpu
+  compute_type: float32
+  idle_timeout_sec: 180
+
+tts:
+  device: cpu
+
+vram:
+  max_agent_vram_mb: 256
+  warning_threshold_pct: 60.0
+  critical_threshold_pct: 70.0
+
+cache:
+  max_cache_mb: 250
