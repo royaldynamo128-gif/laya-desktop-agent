@@ -205,12 +205,12 @@ class LayaDaemon:
         logger.info("Starting Laya Voice Agent Daemon (Diagnostic Mode: %s)...", self.diagnostic_mode)
 
         # Setup OS signal handlers
-        signal.signal(signal.SIGINT, self._handle_signal)
-        signal.signal(signal.SIGTERM, self._handle_signal)
         try:
+            signal.signal(signal.SIGINT, self._handle_signal)
+            signal.signal(signal.SIGTERM, self._handle_signal)
             signal.signal(signal.SIGUSR1, self._handle_sigusr1)
-        except Exception:
-            pass
+        except (ValueError, AttributeError):
+            logger.debug("Signal registration skipped (not in main thread)")
 
         # Pre-warm models
         self.model_mgr.warm_models()
@@ -251,6 +251,9 @@ class LayaDaemon:
 
     def stop(self) -> None:
         """Clean shutdown of all subsystems."""
+        if getattr(self, "_stopped", False):
+            return
+        self._stopped = True
         logger.info("Stopping Laya Desktop Agent...")
         self._running = False
         self.ptt_listener.stop()

@@ -106,17 +106,33 @@ class WhisperEngine:
         else:
             raise ValueError(f"Unsupported audio data type: {type(audio_data)}")
 
-        segments, info = self._model.transcribe(
-            input_audio,
-            language=self.config.language,
-            beam_size=1,  # fast single-beam for low latency
-            vad_filter=False,  # we already run WebRTC VAD
-        )
-
-        text = " ".join(seg.text for seg in segments).strip()
-        elapsed_ms = (time.perf_counter() - start) * 1000.0
-        logger.debug("Transcribed in %.1f ms: '%s' (prob: %.2f)", elapsed_ms, text, info.language_probability)
-        return text, elapsed_ms
+        try:
+            segments, info = self._model.transcribe(
+                input_audio,
+                language=self.config.language,
+                beam_size=1,  # fast single-beam for low latency
+                vad_filter=False,  # we already run WebRTC VAD
+            )
+            text = " ".join(seg.text for seg in segments).strip()
+            elapsed_ms = (time.perf_counter() - start) * 1000.0
+            logger.debug("Transcribed in %.1f ms: '%s' (prob: %.2f)", elapsed_ms, text, info.language_probability)
+            return text, elapsed_ms
+        except Exception as e:
+            if self._current_device == "cuda":
+                logger.warning("CUDA transcription failed (%s). Falling back to CPU int8...", e)
+                self.load(device="cpu", compute_type="int8")
+                segments, info = self._model.transcribe(
+                    input_audio,
+                    language=self.config.language,
+                    beam_size=1,
+                    vad_filter=False,
+                )
+                text = " ".join(seg.text for seg in segments).strip()
+                elapsed_ms = (time.perf_counter() - start) * 1000.0
+                logger.debug("Transcribed via CPU fallback in %.1f ms: '%s'", elapsed_ms, text)
+                return text, elapsed_ms
+            else:
+                raise
 
     def unload(self) -> None:
         """Explicitly release model from memory."""

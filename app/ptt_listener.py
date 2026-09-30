@@ -247,6 +247,13 @@ class PTTListener:
         with self._lock:
             self._is_active = False
 
+    def reset(self) -> None:
+        """Reset internal key tracking and active state."""
+        with self._lock:
+            self._pressed_keys.clear()
+            self._combo_down = False
+            self._is_active = False
+
     def stop(self) -> None:
         self._running = False
         for dev in self._devices:

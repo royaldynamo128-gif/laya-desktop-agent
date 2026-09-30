@@ -55,7 +55,7 @@ def run(profile: str, diagnostic: bool):
     console.print(Panel.fit(
         f"[bold cyan]Laya Voice Desktop Agent[/bold cyan]\n"
         f"Profile: [green]{profile}[/green] | Diagnostic Mode: [yellow]{diagnostic}[/yellow]\n"
-        f"PTT Key: [bold]{cfg.input.ptt_key}[/bold] | Emergency Stop: [bold red]{cfg.input.emergency_stop_key}[/bold red]",
+        f"Shortcut: [bold]{cfg.input.shortcut}[/bold] ({cfg.input.activation_mode}) | Emergency Stop: [bold red]{cfg.input.emergency_stop_key}[/bold red]",
         title="Starting Daemon",
     ))
 
@@ -72,7 +72,7 @@ def diagnose():
     console.print(Panel.fit(
         "[bold yellow]Diagnostic Mode Active[/bold yellow]\n"
         "Voice input will be captured and routed by Laya, but NO actions will be executed on your desktop.\n"
-        "Hold [bold]F12[/bold] and speak a command (e.g. 'Open Chrome', 'Scroll down').\n"
+        f"Press or hold [bold]{cfg.input.shortcut}[/bold] ({cfg.input.activation_mode}) and speak a command (e.g. 'Open Chrome', 'Scroll down').\n"
         "Press [bold red]Ctrl+C[/bold red] to exit.",
         title="Safe Diagnostic Session",
     ))
