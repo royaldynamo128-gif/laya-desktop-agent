@@ -187,12 +187,24 @@ Tested on Arch Linux, AMD Ryzen CPU, NVIDIA RTX 3050 Laptop GPU (6 GB VRAM):
 ## 9. Running Automated Tests
 
 ```bash
-# Run full unit and integration test suite (10/10 passed)
+# Run full unit and integration test suite (14/14 passed)
 bash scripts/test.sh
 
 # Run 30-cycle VRAM and RAM stress benchmark
 bash scripts/stress_test.sh
 ```
+
+The test suite covers:
+- WebRTC VAD silence filtering and tone detection
+- End-to-end audio -> STT -> Laya -> Executor -> Observer -> Verifier -> TTS pipeline
+- Kernel evdev Push-to-Talk and Emergency Stop lifecycle
+- KDE Plasma 6 Wayland `kdotool` window search, activation, and desktop switching
+- Laya decision routing and parameter binding (including folder opening and category window switching)
+- 3-tier safety policy enforcement
+- Single-instance `fcntl.flock` daemon locking
+- Controlled tool registry execution
+- Native AT-SPI2 keyboard/mouse input synthesis and wtype fallback
+- NVML VRAM Guard 3-tier status transitions and emergency callbacks
 
 ---
 
