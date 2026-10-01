@@ -35,6 +35,7 @@ class PTTListener:
         on_press: Optional[Callable[[], None]] = None,
         on_release: Optional[Callable[[], None]] = None,
         on_estop: Optional[Callable[[], None]] = None,
+        on_raw_event: Optional[Callable[[int, int, str], None]] = None,
     ):
         self.shortcut_str = shortcut.strip().upper()
         self.activation_mode = activation_mode.lower().strip()
@@ -42,6 +43,7 @@ class PTTListener:
         self.on_press = on_press
         self.on_release = on_release
         self.on_estop = on_estop
+        self.on_raw_event = on_raw_event
 
         # Parse primary combo groups
         self._combo_groups: List[Set[int]] = self._parse_shortcut(self.shortcut_str)
@@ -142,6 +144,12 @@ class PTTListener:
 
     def _handle_key_event(self, code: int, value: int, device_name: str = "") -> None:
         """Central event handler for key press (1), repeat (2), and release (0)."""
+        if self.on_raw_event:
+            try:
+                self.on_raw_event(code, value, device_name)
+            except Exception:
+                pass
+
         # 1. Emergency Stop Check
         if code == self.estop_key_code and value == 1:
             logger.critical("EMERGENCY STOP key pressed on %s!", device_name or "keyboard")
@@ -177,44 +185,46 @@ class PTTListener:
             # State transition: Combo just became pressed
             if combo_satisfied and not self._combo_down:
                 self._combo_down = True
-                self._press_timestamp = time.time()
+                self._press_timestamp = time.perf_counter()
 
                 if not self._is_active:
                     self._is_active = True
-                    logger.debug("Shortcut %s activated (mode: %s).", self.shortcut_str, self.activation_mode)
+                    logger.info("Shortcut %s DOWN on %s: recording started immediately.", self.shortcut_str, device_name or "keyboard")
                     if self.on_press:
-                        threading.Thread(target=self.on_press, daemon=True).start()
+                        threading.Thread(target=self.on_press, daemon=True, name="PTTPressHandler").start()
                 else:
                     # In toggle or hybrid mode: second tap stops recording
                     if self.activation_mode in ("toggle", "hybrid"):
                         self._is_active = False
-                        logger.debug("Shortcut %s tapped while active: stopping recording.", self.shortcut_str)
+                        logger.info("Shortcut %s toggled OFF: stopping recording.", self.shortcut_str)
                         if self.on_release:
-                            threading.Thread(target=self.on_release, daemon=True).start()
+                            threading.Thread(target=self.on_release, daemon=True, name="PTTReleaseHandler").start()
 
-            # State transition: Combo released
+            # State transition: Combo released (either key released)
             elif not combo_satisfied and self._combo_down:
                 self._combo_down = False
-                duration = time.time() - self._press_timestamp
+                hold_duration = time.perf_counter() - self._press_timestamp
 
                 if self.activation_mode == "push_to_talk":
+                    # Pure Push-to-Talk: release immediately on key release
                     if self._is_active:
                         self._is_active = False
-                        logger.debug("Shortcut %s released after %.2fs in PTT mode.", self.shortcut_str, duration)
+                        logger.info("Shortcut %s UP (held %.3fs) on %s: finalizing speech...", self.shortcut_str, hold_duration, device_name or "keyboard")
                         if self.on_release:
-                            threading.Thread(target=self.on_release, daemon=True).start()
+                            threading.Thread(target=self.on_release, daemon=True, name="PTTReleaseHandler").start()
 
                 elif self.activation_mode == "hybrid":
-                    if duration >= self.hold_threshold_sec:
-                        # Held long enough to be Push-to-Talk
+                    if hold_duration >= self.hold_threshold_sec:
                         if self._is_active:
                             self._is_active = False
-                            logger.debug("Shortcut %s held for %.2fs -> Push-to-Talk release.", self.shortcut_str, duration)
+                            logger.info("Shortcut %s held %.3fs in hybrid mode -> PTT release.", self.shortcut_str, hold_duration)
                             if self.on_release:
-                                threading.Thread(target=self.on_release, daemon=True).start()
+                                threading.Thread(target=self.on_release, daemon=True, name="PTTReleaseHandler").start()
                     else:
-                        # Quick tap (< 350ms): Stay in toggle listening mode!
-                        logger.debug("Shortcut %s quick tap (%.2fs) -> Keeping toggle active.", self.shortcut_str, duration)
+                        logger.debug("Shortcut %s quick tap (%.3fs) in hybrid mode -> Keeping toggle active.", self.shortcut_str, hold_duration)
+
+                elif self.activation_mode == "toggle":
+                    logger.debug("Shortcut %s released in toggle mode (kept active).", self.shortcut_str)
 
     def _activate_press(self) -> None:
         if not self._is_active:

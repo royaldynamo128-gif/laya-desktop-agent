@@ -9,13 +9,17 @@ import fcntl
 import logging
 import os
 import signal
+import subprocess
 import sys
+import threading
 import time
 
 from core.config import AgentConfig, load_config
 from core.state import StateManager, AgentState
 from core.events import EventBus
 from core.coordinator import PipelineCoordinator
+from core.status_ipc import StatusBroadcaster
+from core.lifecycle import CommandLifecycle, CommandStage, LifecycleManager, STAGE_USER_LABELS
 from monitoring.resource_monitor import ResourceMonitor
 from monitoring.vram_guard import VRAMGuard
 from monitoring.cache_reaper import CacheReaper
@@ -27,6 +31,7 @@ from audio.player import AudioPlayer
 from models.manager import ModelManager
 from integrations.kdotool_client import KdotoolClient
 from integrations.flatpak_helper import AppLauncher
+from integrations.app_catalog import AppCatalog
 from integrations.atspi_client import AtspiClient
 from integrations.dbus_client import DBusClient
 from integrations.playwright_client import BrowserClient
@@ -56,8 +61,14 @@ class LayaDaemon:
         self._lock_file = None
         self._running = False
 
-        # 1. State & Monitoring
+        # 1. State, Monitoring & IPC
         self.state_mgr = StateManager()
+        self.status_broadcaster = StatusBroadcaster()
+        self._overlay_proc: Optional[subprocess.Popen] = None
+        self.lifecycle_mgr = LifecycleManager()
+        self._command_lock = threading.Lock()
+        self._is_processing = False
+        self._active_lifecycle: Optional[CommandLifecycle] = None
         self.monitor = ResourceMonitor()
         self.vram_guard = VRAMGuard(config.vram, self.monitor)
         self.reaper = CacheReaper(config)
@@ -82,6 +93,7 @@ class LayaDaemon:
 
         # 3. Integrations
         self.kdotool = KdotoolClient()
+        self.catalog = AppCatalog(cache_file=config.data_dir / "app_catalog.json")
         self.launcher = AppLauncher(cache_file=config.data_dir / "app_registry.json")
         self.atspi = AtspiClient()
         self.dbus = DBusClient()
@@ -92,10 +104,10 @@ class LayaDaemon:
         self._register_all_tools()
 
         # 5. Execution & Verification
-        self.binder = ParameterBinder()
+        self.binder = ParameterBinder(catalog=self.catalog)
         self.executor = ActionExecutor(self.registry, self.safety_policy, self.emergency_stop, config.safety)
         self.observer = DesktopObserver(self.kdotool, self.atspi)
-        self.verifier = ActionVerifier()
+        self.verifier = ActionVerifier(kdotool=self.kdotool)
         self.recovery_mgr = RecoveryManager(max_retries=config.safety.max_retries)
 
         # 6. Pipeline Coordinator
@@ -113,7 +125,9 @@ class LayaDaemon:
             tracker=self.tracker,
             reaper=self.reaper,
             monitor=self.monitor,
+            status_broadcaster=self.status_broadcaster,
             diagnostic_mode=diagnostic_mode,
+            lifecycle_mgr=self.lifecycle_mgr,
         )
 
         # 7. Global Key Listener
@@ -128,7 +142,7 @@ class LayaDaemon:
         )
 
     def _register_all_tools(self) -> None:
-        self.registry.register(OpenApplicationTool(self.launcher, self.kdotool))
+        self.registry.register(OpenApplicationTool(self.launcher, self.kdotool, catalog=self.catalog))
         self.registry.register(CloseApplicationTool(self.kdotool))
         self.registry.register(SwitchWindowTool(self.kdotool))
         self.registry.register(MinimizeWindowTool(self.kdotool))
@@ -167,34 +181,131 @@ class LayaDaemon:
             logger.warning("Ignoring shortcut: Agent is in Emergency Stop state.")
             return
 
-        logger.info("Voice Agent active: recording (%s)...", self.config.input.shortcut)
+        # Concurrency safety: if previous command still actively processing, avoid corruption
+        if self._is_processing:
+            logger.warning("Previous command still processing. Rejecting concurrent actuation.")
+            return
+
+        lifecycle = self.lifecycle_mgr.new_command()
+        self._active_lifecycle = lifecycle
+        lifecycle.transition(CommandStage.PTT_START)
+        lifecycle.transition(CommandStage.AUDIO_START)
+
+        logger.info("[%s] Voice Agent active: recording (%s)...", lifecycle.command_id, self.config.input.shortcut)
         self.state_mgr.set_state(AgentState.LISTENING, reason="Shortcut activated")
+        self.status_broadcaster.broadcast(
+            state="LISTENING",
+            title="🎙 Listening",
+            detail="Speak now",
+            next_action="",
+        )
         self.audio_capture.start()
-        # Fast visual desktop feedback
-        self.dbus.show_notification("Laya Agent", f"🎤 Listening... ({self.config.input.shortcut})", timeout_ms=2000)
 
     def _on_ptt_release(self) -> None:
         """Called when user releases Push-to-Talk key."""
         if not self.audio_capture.is_capturing:
             return
 
-        logger.info("Push-to-Talk released: processing speech...")
-        raw_pcm = self.audio_capture.stop()
-        if raw_pcm:
-            # Process in thread to avoid blocking evdev listener
-            import threading
-            threading.Thread(
-                target=self.coordinator.process_audio,
-                args=(raw_pcm,),
-                daemon=True,
-                name="AudioProcessor",
-            ).start()
+        lifecycle = self._active_lifecycle
+        if not lifecycle:
+            lifecycle = self.lifecycle_mgr.new_command()
+            self._active_lifecycle = lifecycle
+
+        lifecycle.transition(CommandStage.AUDIO_STOP)
+        logger.info("[%s] Push-to-Talk released: finalizing speech with post-roll...", lifecycle.command_id)
+
+        # Transition directly to TRANSCRIBING instead of generic PROCESSING
+        lifecycle.transition(CommandStage.STT_START)
+        self.status_broadcaster.broadcast(
+            state="TRANSCRIBING",
+            title="◌ Transcribing...",
+            detail="Converting speech to text...",
+            next_action="",
+        )
+
+        # Start global command watchdog (18.0 seconds limit)
+        lifecycle.start_watchdog(timeout_sec=18.0, on_timeout=self._on_command_timeout)
+
+        def _stop_and_process():
+            with self._command_lock:
+                self._is_processing = True
+                try:
+                    raw_pcm = self.audio_capture.stop(wait_postroll=True)
+                    if not raw_pcm:
+                        logger.warning("[%s] No audio captured on PTT release.", lifecycle.command_id)
+                        lifecycle.fail(reason="No audio captured")
+                        self.status_broadcaster.broadcast(
+                            state="FAILURE",
+                            title="● No speech detected",
+                            detail="Try holding Meta + Alt while speaking",
+                            next_action="",
+                            level="warning",
+                        )
+                        self.state_mgr.set_state(AgentState.IDLE, reason="Empty audio")
+                        if hasattr(self, "coordinator"):
+                            from monitoring.latency_tracker import CommandMetrics
+                            self.coordinator._speak_response("I didn't hear anything.", CommandMetrics(command_id=lifecycle.command_id))
+                        return
+
+                    self.coordinator.process_audio(raw_pcm, lifecycle=lifecycle)
+                except Exception as e:
+                    logger.exception("[%s] Unhandled exception in AudioProcessor: %s", lifecycle.command_id, e)
+                    lifecycle.fail(reason=str(e))
+                    self.status_broadcaster.broadcast(
+                        state="FAILURE",
+                        title="✕ Failed",
+                        detail=f"Error: {str(e)[:30]}",
+                        next_action="Try again",
+                        level="error",
+                    )
+                    self.state_mgr.set_state(AgentState.IDLE, reason="Exception in processing")
+                    if hasattr(self, "coordinator"):
+                        from monitoring.latency_tracker import CommandMetrics
+                        self.coordinator._speak_response("An error occurred.", CommandMetrics(command_id=lifecycle.command_id))
+                finally:
+                    lifecycle.stop_watchdog()
+                    self._is_processing = False
+                    self._active_lifecycle = None
+
+        threading.Thread(
+            target=_stop_and_process,
+            daemon=True,
+            name=f"AudioProc-{lifecycle.command_id}",
+        ).start()
+
+    def _on_command_timeout(self, lifecycle: CommandLifecycle) -> None:
+        """Called automatically when a command exceeds its global watchdog timeout."""
+        logger.error("[%s] Global watchdog timeout! Stage: %s", lifecycle.command_id, lifecycle.current_stage.value)
+        if self.audio_capture.is_capturing:
+            self.audio_capture.stop(wait_postroll=False)
+
+        stuck_label = STAGE_USER_LABELS.get(lifecycle.current_stage, lifecycle.current_stage.value)
+        self.status_broadcaster.broadcast(
+            state="FAILURE",
+            title="✕ Timed Out",
+            detail=f"Stuck at: {stuck_label}",
+            next_action="Hold Meta + Alt to try again",
+            level="error",
+        )
+        self.state_mgr.set_state(AgentState.IDLE, reason="Command timeout")
+        if hasattr(self, "coordinator"):
+            from monitoring.latency_tracker import CommandMetrics
+            self.coordinator._speak_response("Command timed out.", CommandMetrics(command_id=lifecycle.command_id))
+        self._is_processing = False
+        self._active_lifecycle = None
 
     def _on_estop_press(self) -> None:
         """Called when user hits Emergency Stop key."""
         self.emergency_stop.trigger(reason="Global hotkey F11 pressed")
         self.state_mgr.set_state(AgentState.PAUSED, reason="Emergency Stop")
         self.audio_capture.stop()
+        self.status_broadcaster.broadcast(
+            state="ERROR",
+            title="⚠ EMERGENCY STOP",
+            detail="Halted all pending actions",
+            next_action="Hold Meta + Alt to resume",
+            level="error",
+        )
         self.dbus.show_notification("Laya Agent", "EMERGENCY STOP ACTIVATED", timeout_ms=4000)
 
     def start(self) -> None:
@@ -204,26 +315,46 @@ class LayaDaemon:
 
         logger.info("Starting Laya Voice Agent Daemon (Diagnostic Mode: %s)...", self.diagnostic_mode)
 
+        # 0. Start Status IPC & Overlay
+        self.status_broadcaster.start()
+        try:
+            overlay_env = os.environ.copy()
+            overlay_env["LD_PRELOAD"] = "/usr/lib/libgtk4-layer-shell.so"
+            self._overlay_proc = subprocess.Popen(
+                [sys.executable, "-m", "app.ui.status_overlay"],
+                env=overlay_env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            logger.info("Spawned Live Status Overlay (PID: %d)", self._overlay_proc.pid)
+        except Exception as e:
+            logger.warning("Could not spawn status overlay: %s", e)
+
         # Setup OS signal handlers
         try:
             signal.signal(signal.SIGINT, self._handle_signal)
             signal.signal(signal.SIGTERM, self._handle_signal)
             signal.signal(signal.SIGUSR1, self._handle_sigusr1)
+            signal.signal(signal.SIGUSR2, self._handle_sigusr2)
         except (ValueError, AttributeError):
             logger.debug("Signal registration skipped (not in main thread)")
 
-        # Pre-warm models
+        # Pre-warm models & audio stream
         self.model_mgr.warm_models()
         self.model_mgr.start_sweeper()
+        self.audio_capture.warm_stream()
 
         # Start PTT listener
         self.ptt_listener.start()
 
         self._running = True
         self.state_mgr.set_state(AgentState.IDLE, reason="Daemon started")
-        self.dbus.show_notification(
-            "Laya Agent",
-            f"Voice Desktop Agent Online ({self.config.input.shortcut} = Talk, F11 = Stop)",
+        self.status_broadcaster.broadcast(
+            state="READY",
+            title="",
+            detail="",
+            next_action="",
+            level="info",
         )
 
         logger.info(
@@ -236,6 +367,20 @@ class LayaDaemon:
                 time.sleep(1.0)
                 # Periodic VRAM & health check
                 self.vram_guard.check_status()
+                # Check status overlay health
+                if self._overlay_proc and self._overlay_proc.poll() is not None and self._running:
+                    logger.warning("Status overlay terminated unexpectedly. Restarting...")
+                    try:
+                        overlay_env = os.environ.copy()
+                        overlay_env["LD_PRELOAD"] = "/usr/lib/libgtk4-layer-shell.so"
+                        self._overlay_proc = subprocess.Popen(
+                            [sys.executable, "-m", "app.ui.status_overlay"],
+                            env=overlay_env,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
+                    except Exception as e:
+                        logger.error("Failed to restart status overlay: %s", e)
         except KeyboardInterrupt:
             pass
         finally:
@@ -244,6 +389,15 @@ class LayaDaemon:
     def _handle_sigusr1(self, signum, frame):
         logger.info("Received SIGUSR1: External activation trigger.")
         self.ptt_listener.trigger_activation()
+
+    def _handle_sigusr2(self, signum, frame):
+        logger.info("Received SIGUSR2: External VRAM cleanup trigger.")
+        try:
+            self.model_mgr.clean_vram()
+            self.vram_guard.emergency_cleanup()
+            logger.info("External VRAM cleanup completed.")
+        except Exception as e:
+            logger.warning("Error during SIGUSR2 VRAM cleanup: %s", e)
 
     def _handle_signal(self, signum, frame):
         logger.info("Received termination signal (%d). Shutting down cleanly...", signum)
@@ -256,6 +410,14 @@ class LayaDaemon:
         self._stopped = True
         logger.info("Stopping Laya Desktop Agent...")
         self._running = False
+        if self._overlay_proc:
+            try:
+                self._overlay_proc.terminate()
+                self._overlay_proc.wait(timeout=2.0)
+            except Exception:
+                pass
+            self._overlay_proc = None
+        self.status_broadcaster.stop()
         self.ptt_listener.stop()
         self.audio_capture.close()
         self.model_mgr.shutdown()

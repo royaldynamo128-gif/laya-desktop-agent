@@ -12,6 +12,8 @@ Environment="WAYLAND_DISPLAY=wayland-0"
 Environment="XDG_RUNTIME_DIR=/run/user/1000"
 Environment="XDG_SESSION_TYPE=wayland"
 Environment="XDG_CURRENT_DESKTOP=KDE"
+Environment="DISPLAY=:0"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
 ExecStart=/home/rai/Projects/laya-desktop-agent/.venv/bin/python -m app.cli run
 Restart=on-failure
 RestartSec=5s

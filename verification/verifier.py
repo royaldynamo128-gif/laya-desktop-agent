@@ -6,9 +6,11 @@ Validates whether executed desktop actions achieved their intended post-conditio
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import logging
+import time
 from execution.parameter_binder import BoundAction
 from tools.base import ToolResult
 from verification.observer import DesktopObservation
+from integrations.kdotool_client import KdotoolClient
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,9 @@ class VerificationResult:
 
 
 class ActionVerifier:
+    def __init__(self, kdotool: Optional[KdotoolClient] = None):
+        self.kdotool = kdotool
+
     def verify(
         self,
         action: BoundAction,
@@ -47,31 +52,86 @@ class ActionVerifier:
 
         tool_name = action.tool_name
         target = action.target.lower().strip()
+        expected_wm = action.arguments.get("wm_class", "").lower().strip()
+        candidate_classes = [c.lower() for c in action.arguments.get("candidate_wm_classes", []) if c]
+        is_folder = result.data.get("is_folder", False)
+        reported_win_id = result.data.get("window_id")
+        target_clean = target.lower()
+
+        def _is_match(cls: str, title: str, win_id: Optional[str] = None) -> bool:
+            if reported_win_id and win_id and reported_win_id.lower() == win_id.lower():
+                return True
+            cls_lower = cls.lower()
+            title_lower = title.lower()
+            if expected_wm and (expected_wm in cls_lower or cls_lower in expected_wm or expected_wm in title_lower):
+                return True
+            for cand in candidate_classes:
+                if cand in cls_lower or cls_lower in cand or cand in title_lower:
+                    return True
+            if target_clean and (target_clean in cls_lower or target_clean in title_lower):
+                return True
+            for token in target_clean.split():
+                if len(token) > 3 and (token in cls_lower or token in title_lower):
+                    return True
+            return False
 
         # 3. Open Application Verification
         if tool_name == "open_application":
-            # Check if active window or any open window matches target
+            if is_folder:
+                if post_obs.active_window_class.lower() in ("dolphin", "nautilus", "thunar") or target in post_obs.active_window_name.lower():
+                    return VerificationResult(
+                        verified=True,
+                        message=f"Verified: Folder '{target}' is open.",
+                        details={"active_window": post_obs.active_window_name, "class": post_obs.active_window_class},
+                    )
+
+            # Check immediate match
             active_class = post_obs.active_window_class.lower()
             active_title = post_obs.active_window_name.lower()
-            if target in active_class or target in active_title or any(w in active_class for w in target.split()):
+
+            if _is_match(active_class, active_title, post_obs.active_window_id):
                 return VerificationResult(
                     verified=True,
                     message=f"Verified: '{post_obs.active_window_name}' is open and focused.",
                     details={"active_window": post_obs.active_window_name, "class": post_obs.active_window_class},
                 )
-            
-            # Check if new window count increased
-            if pre_obs and len(post_obs.open_window_ids) > len(pre_obs.open_window_ids):
+
+            # If not immediately matched and newly launched, poll for up to 1.5s
+            if self.kdotool and not result.data.get("already_running", False):
+                for _ in range(5):
+                    time.sleep(0.3)
+                    cur_id = self.kdotool.get_active_window()
+                    if cur_id:
+                        cur_class = self.kdotool.get_window_class(cur_id).lower()
+                        cur_title = self.kdotool.get_window_name(cur_id).lower()
+                        if _is_match(cur_class, cur_title, cur_id):
+                            post_obs.active_window_id = cur_id
+                            post_obs.active_window_class = cur_class
+                            post_obs.active_window_name = cur_title
+                            return VerificationResult(
+                                verified=True,
+                                message=f"Verified: '{cur_title}' is open and focused.",
+                                details={"active_window": cur_title, "class": cur_class},
+                            )
+
+            # If active window is a different application -> TARGET_MISMATCH
+            if post_obs.active_window_class:
                 return VerificationResult(
-                    verified=True,
-                    message=f"Verified: Application '{target}' opened.",
-                    details={"new_window_detected": True},
+                    verified=False,
+                    message=f"TARGET_MISMATCH: Expected '{action.target}', but '{post_obs.active_window_name}' ({post_obs.active_window_class}) is active.",
+                    details={
+                        "stage": "target_mismatch",
+                        "expected_target": action.target,
+                        "expected_wm_class": expected_wm,
+                        "actual_window": post_obs.active_window_name,
+                        "actual_class": post_obs.active_window_class,
+                    },
                 )
 
             return VerificationResult(
-                verified=True,  # Launched successfully, window may take a second to paint
-                message=f"Application launch issued for '{target}'.",
-                details={"target": target, "active": post_obs.active_window_name},
+                verified=False,
+                message=f"TARGET_MISMATCH: Application '{action.target}' did not present a focused window.",
+                details={"stage": "window_not_focused", "expected_target": action.target},
             )
 
         # 4. Close Application Verification
@@ -93,16 +153,22 @@ class ActionVerifier:
         elif tool_name == "switch_window":
             active_class = post_obs.active_window_class.lower()
             active_title = post_obs.active_window_name.lower()
-            if not target or target in active_class or target in active_title:
+            if not target or target in ("previous", "active_window") or _is_match(active_class, active_title):
                 return VerificationResult(
                     verified=True,
                     message=f"Verified: Switched to '{post_obs.active_window_name}'.",
-                    details={"active_title": post_obs.active_window_name},
+                    details={"active_title": post_obs.active_window_name, "class": post_obs.active_window_class},
                 )
             return VerificationResult(
                 verified=False,
-                message=f"Window did not switch to '{target}'. Current window is '{post_obs.active_window_name}'.",
-                details={"target": target, "active": post_obs.active_window_name},
+                message=f"TARGET_MISMATCH: Window did not switch to '{target}'. Current window is '{post_obs.active_window_name}' ({post_obs.active_window_class}).",
+                details={
+                    "stage": "target_mismatch",
+                    "expected_target": target,
+                    "expected_wm_class": expected_wm,
+                    "actual_window": post_obs.active_window_name,
+                    "actual_class": post_obs.active_window_class,
+                },
             )
 
         # 6. Minimize Window Verification

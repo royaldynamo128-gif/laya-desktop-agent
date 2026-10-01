@@ -21,7 +21,13 @@ class CommandMetrics:
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     transcription: str = ""
     intent: str = ""
+    raw_transcription: str = ""
+    target: str = ""
     selected_tool: str = ""
+    audio_quality_conf: float = 1.0
+    stt_confidence: float = 1.0
+    entity_resolution_conf: float = 1.0
+    intent_confidence: float = 1.0
     durations_ms: Dict[str, float] = field(default_factory=dict)
     total_ms: float = 0.0
     success: bool = True
@@ -29,17 +35,24 @@ class CommandMetrics:
     ram_used_mb: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
+        durations = getattr(self, "durations_ms", {}) or {}
         return {
-            "command_id": self.command_id,
-            "timestamp": self.timestamp,
-            "transcription": self.transcription,
-            "intent": self.intent,
-            "selected_tool": self.selected_tool,
-            "durations_ms": {k: round(v, 2) for k, v in self.durations_ms.items()},
-            "total_ms": round(self.total_ms, 2),
-            "success": self.success,
-            "vram_used_mb": round(self.vram_used_mb, 1),
-            "ram_used_mb": round(self.ram_used_mb, 1),
+            "command_id": getattr(self, "command_id", ""),
+            "timestamp": getattr(self, "timestamp", ""),
+            "raw_transcription": getattr(self, "raw_transcription", ""),
+            "transcription": getattr(self, "transcription", ""),
+            "target": getattr(self, "target", ""),
+            "intent": getattr(self, "intent", ""),
+            "selected_tool": getattr(self, "selected_tool", ""),
+            "audio_quality_conf": round(getattr(self, "audio_quality_conf", 1.0), 2),
+            "stt_confidence": round(getattr(self, "stt_confidence", 1.0), 2),
+            "entity_resolution_conf": round(getattr(self, "entity_resolution_conf", 1.0), 2),
+            "intent_confidence": round(getattr(self, "intent_confidence", 1.0), 2),
+            "durations_ms": {k: round(v, 2) for k, v in durations.items()},
+            "total_ms": round(getattr(self, "total_ms", 0.0), 2),
+            "success": getattr(self, "success", True),
+            "vram_used_mb": round(getattr(self, "vram_used_mb", 0.0), 1),
+            "ram_used_mb": round(getattr(self, "ram_used_mb", 0.0), 1),
         }
 
 

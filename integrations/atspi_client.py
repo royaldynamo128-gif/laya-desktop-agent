@@ -107,3 +107,96 @@ class AtspiClient:
 
         except Exception:
             pass
+
+    def get_focused_element_text(self) -> str:
+        """Find the currently focused UI element and return its text/name."""
+        if not self.enabled:
+            return ""
+        try:
+            desktop = self.get_desktop()
+            if not desktop:
+                return ""
+            for i in range(desktop.get_child_count()):
+                app = desktop.get_child_at_index(i)
+                if not app:
+                    continue
+                for j in range(app.get_child_count()):
+                    win = app.get_child_at_index(j)
+                    if not win:
+                        continue
+                    elem = self._find_focused_child(win)
+                    if elem:
+                        txt_iface = elem.get_text_iface()
+                        if txt_iface and txt_iface.get_character_count() > 0:
+                            return txt_iface.get_text(0, 500).strip()
+                        name = elem.get_name()
+                        if name:
+                            return name.strip()
+        except Exception as e:
+            logger.debug("Error getting focused element: %s", e)
+        return ""
+
+    def _find_focused_child(self, accessible: Any) -> Optional[Any]:
+        try:
+            state = accessible.get_state_set()
+            if state.contains(Atspi.StateType.FOCUSED):
+                return accessible
+            for i in range(accessible.get_child_count()):
+                child = accessible.get_child_at_index(i)
+                if child:
+                    found = self._find_focused_child(child)
+                    if found:
+                        return found
+        except Exception:
+            pass
+        return None
+
+    def get_visible_buttons(self, max_buttons: int = 15) -> List[str]:
+        """Discover clickable button labels in the currently active window."""
+        if not self.enabled:
+            return []
+        buttons: List[str] = []
+        try:
+            desktop = self.get_desktop()
+            if not desktop:
+                return []
+            for i in range(desktop.get_child_count()):
+                app = desktop.get_child_at_index(i)
+                if not app:
+                    continue
+                for j in range(app.get_child_count()):
+                    win = app.get_child_at_index(j)
+                    if not win:
+                        continue
+                    state = win.get_state_set()
+                    if state.contains(Atspi.StateType.ACTIVE) or state.contains(Atspi.StateType.FOCUSED):
+                        self._collect_buttons_recursive(win, buttons, max_buttons)
+                        if buttons:
+                            return buttons
+        except Exception as e:
+            logger.debug("Error discovering buttons: %s", e)
+        return buttons
+
+    def _collect_buttons_recursive(self, accessible: Any, results: List[str], max_buttons: int) -> None:
+        if len(results) >= max_buttons or accessible is None:
+            return
+        try:
+            role_name = accessible.get_role_name()
+            if role_name in ("push button", "button", "toggle button"):
+                name = accessible.get_name()
+                if name and name.strip() and name.strip() not in results:
+                    results.append(name.strip())
+            for i in range(accessible.get_child_count()):
+                if len(results) >= max_buttons:
+                    break
+                child = accessible.get_child_at_index(i)
+                if child:
+                    self._collect_buttons_recursive(child, results, max_buttons)
+        except Exception:
+            pass
+
+    def get_window_summary(self) -> str:
+        """Return a compact textual summary of visible UI text in active window."""
+        texts = self.get_active_app_text(max_elements=10)
+        return " | ".join(texts) if texts else ""
+

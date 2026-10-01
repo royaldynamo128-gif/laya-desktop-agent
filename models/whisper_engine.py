@@ -13,7 +13,45 @@ import numpy as np
 from faster_whisper import WhisperModel
 from core.config import STTConfig
 
+import re
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_COMMAND_PROMPT = (
+    "Open Chrome. Open Dolphin. Open the text editor and write Hello World. "
+    "Open Chrome and search for Linux. Open Settings. Switch to Telegram. "
+    "Close this window."
+)
+
+HALLUCINATIONS = {
+    "thank you.", "thank you", "thanks for watching.", "thanks for watching",
+    "thank you very much.", "subscribe.", "please subscribe.", "bye.", "you",
+    ".", "..", "...", "?", "!"
+}
+
+
+def is_hallucination(text: str) -> bool:
+    clean = text.lower().strip()
+    if clean in HALLUCINATIONS:
+        return True
+    if not re.sub(r"[^\w\s]", "", clean).strip():
+        return True
+    tokens = clean.split()
+    if len(tokens) >= 3 and len(set(tokens)) == 1:
+        return True
+    return False
+
+
+class TranscriptionResult(tuple):
+    def __new__(cls, text: str, elapsed_ms: float, confidence: float = 1.0, language_prob: float = 1.0, raw_text: str = ""):
+        return super().__new__(cls, (text, elapsed_ms))
+
+    def __init__(self, text: str, elapsed_ms: float, confidence: float = 1.0, language_prob: float = 1.0, raw_text: str = ""):
+        self.text = text
+        self.raw_text = raw_text or text
+        self.elapsed_ms = elapsed_ms
+        self.confidence = confidence
+        self.language_prob = language_prob
 
 
 class WhisperEngine:
@@ -60,17 +98,37 @@ class WhisperEngine:
             target_compute,
         )
 
-        # Unload previous instance if needed
-        self.unload()
-
         start = time.perf_counter()
         try:
-            self._model = WhisperModel(
-                self.config.model_size,
-                device=target_device,
-                compute_type=target_compute,
-                download_root=self.download_root,
-            )
+            if target_device == "cuda":
+                # Ensure bundled nvidia CUDA 12 libraries are loaded globally
+                import ctypes, sys
+                from pathlib import Path
+                nvidia_dir = Path(sys.executable).parent.parent / "lib/python3.12/site-packages/nvidia"
+                if nvidia_dir.exists():
+                    for rel in ["cublas/lib/libcublas.so.12", "cudnn/lib/libcudnn_ops.so.9"]:
+                        lib_file = nvidia_dir / rel
+                        if lib_file.exists():
+                            try:
+                                ctypes.CDLL(str(lib_file), mode=ctypes.RTLD_GLOBAL)
+                            except Exception:
+                                pass
+
+            try:
+                self._model = WhisperModel(
+                    self.config.model_size,
+                    device=target_device,
+                    compute_type=target_compute,
+                    download_root=self.download_root,
+                    local_files_only=True,
+                )
+            except Exception:
+                self._model = WhisperModel(
+                    self.config.model_size,
+                    device=target_device,
+                    compute_type=target_compute,
+                    download_root=self.download_root,
+                )
             self._current_device = target_device
             self._current_compute_type = target_compute
             self._last_used_time = time.time()
@@ -84,8 +142,14 @@ class WhisperEngine:
                 logger.error("Failed to load Whisper on CPU: %s", e)
                 raise
 
-    def transcribe(self, audio_data: Union[str, Path, bytes, np.ndarray]) -> Tuple[str, float]:
-        """Transcribe audio (file path, raw PCM bytes, or float32/int16 array) to text."""
+    def transcribe(
+        self,
+        audio_data: Union[str, Path, bytes, np.ndarray],
+        initial_prompt: Optional[str] = None,
+        hotwords: Optional[str] = None,
+        beam_size: int = 5,
+    ) -> TranscriptionResult:
+        """Transcribe audio with beam search, dynamic vocabulary biasing, and peak normalization."""
         if not self.is_loaded:
             self.load()
 
@@ -97,26 +161,82 @@ class WhisperEngine:
             audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
             input_audio = audio_array
         elif isinstance(audio_data, (str, Path)):
-            input_audio = str(audio_data)
+            import wave
+            with wave.open(str(audio_data), "rb") as wf:
+                sr = wf.getframerate()
+                ch = wf.getnchannels()
+                frames = wf.readframes(wf.getnframes())
+                arr = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+                if ch > 1:
+                    arr = arr.reshape(-1, ch).mean(axis=1)
+                if sr != 16000:
+                    num_samples = int(len(arr) * 16000 / sr)
+                    arr = np.interp(
+                        np.linspace(0, len(arr), num_samples, endpoint=False),
+                        np.arange(len(arr)),
+                        arr,
+                    ).astype(np.float32)
+                input_audio = arr
         elif isinstance(audio_data, np.ndarray):
             if audio_data.dtype == np.int16:
                 input_audio = audio_data.astype(np.float32) / 32768.0
             else:
                 input_audio = audio_data
+            input_audio = np.squeeze(input_audio)
         else:
             raise ValueError(f"Unsupported audio data type: {type(audio_data)}")
+
+        if isinstance(input_audio, np.ndarray):
+            input_audio = np.squeeze(input_audio)
+
+        # Normalize non-silent audio to nominal level (~0.88 peak) for optimal Whisper attention
+        if len(input_audio) > 0:
+            peak = float(np.max(np.abs(input_audio)))
+            if peak > 0.03:
+                scale = min(0.88 / peak, 3.5)
+                input_audio = np.clip(input_audio * scale, -1.0, 1.0)
+
+        vad_params = dict(min_silence_duration_ms=250, speech_pad_ms=300)
+
+        effective_prompt = initial_prompt or DEFAULT_COMMAND_PROMPT
 
         try:
             segments, info = self._model.transcribe(
                 input_audio,
                 language=self.config.language,
-                beam_size=1,  # fast single-beam for low latency
-                vad_filter=False,  # we already run WebRTC VAD
+                beam_size=beam_size,
+                best_of=beam_size,
+                temperature=0.0,
+                condition_on_previous_text=False,
+                initial_prompt=effective_prompt,
+                hotwords=hotwords,
+                vad_filter=True,
+                vad_parameters=vad_params,
             )
-            text = " ".join(seg.text for seg in segments).strip()
             elapsed_ms = (time.perf_counter() - start) * 1000.0
-            logger.debug("Transcribed in %.1f ms: '%s' (prob: %.2f)", elapsed_ms, text, info.language_probability)
-            return text, elapsed_ms
+
+            # Prevent hallucinating text on silence/ambient noise
+            if getattr(info, "no_speech_prob", 0.0) > 0.60:
+                logger.debug("High no-speech probability (%.2f). Rejecting hallucination.", info.no_speech_prob)
+                return TranscriptionResult("", elapsed_ms, confidence=0.0, language_prob=getattr(info, "language_probability", 0.0), raw_text="")
+
+            segments_list = list(segments)
+            text = " ".join(seg.text for seg in segments_list).strip()
+
+            if is_hallucination(text):
+                logger.debug("Transcription '%s' identified as hallucination. Rejecting.", text)
+                return TranscriptionResult("", elapsed_ms, confidence=0.0, language_prob=getattr(info, "language_probability", 0.0), raw_text=text)
+
+            # Calculate STT confidence from average log probabilities
+            stt_conf = 0.95
+            if segments_list:
+                logprobs = [getattr(s, "avg_logprob", -0.2) for s in segments_list]
+                avg_lp = sum(logprobs) / len(logprobs)
+                import math
+                stt_conf = round(max(0.1, min(1.0, math.exp(avg_lp))), 3)
+
+            logger.debug("Transcribed in %.1f ms: '%s' (conf: %.2f, prob: %.2f)", elapsed_ms, text, stt_conf, info.language_probability)
+            return TranscriptionResult(text, elapsed_ms, confidence=stt_conf, language_prob=info.language_probability, raw_text=text)
         except Exception as e:
             if self._current_device == "cuda":
                 logger.warning("CUDA transcription failed (%s). Falling back to CPU int8...", e)
@@ -124,13 +244,23 @@ class WhisperEngine:
                 segments, info = self._model.transcribe(
                     input_audio,
                     language=self.config.language,
-                    beam_size=1,
-                    vad_filter=False,
+                    beam_size=beam_size,
+                    best_of=beam_size,
+                    temperature=0.0,
+                    condition_on_previous_text=False,
+                    initial_prompt=effective_prompt,
+                    hotwords=hotwords,
+                    vad_filter=True,
+                    vad_parameters=vad_params,
                 )
-                text = " ".join(seg.text for seg in segments).strip()
                 elapsed_ms = (time.perf_counter() - start) * 1000.0
-                logger.debug("Transcribed via CPU fallback in %.1f ms: '%s'", elapsed_ms, text)
-                return text, elapsed_ms
+                if getattr(info, "no_speech_prob", 0.0) > 0.60:
+                    return TranscriptionResult("", elapsed_ms, confidence=0.0, language_prob=getattr(info, "language_probability", 0.0), raw_text="")
+                segments_list = list(segments)
+                text = " ".join(seg.text for seg in segments_list).strip()
+                if is_hallucination(text):
+                    return TranscriptionResult("", elapsed_ms, confidence=0.0, language_prob=getattr(info, "language_probability", 0.0), raw_text=text)
+                return TranscriptionResult(text, elapsed_ms, confidence=0.85, language_prob=info.language_probability, raw_text=text)
             else:
                 raise
 
@@ -149,6 +279,8 @@ class WhisperEngine:
 
     def check_idle(self) -> bool:
         """Check if model has exceeded idle timeout and unload if so."""
+        if self.config.idle_timeout_sec <= 0:
+            return False  # 0 or negative = never unload
         if self.is_loaded and (time.time() - self._last_used_time) > self.config.idle_timeout_sec:
             logger.info("Faster-Whisper exceeded idle timeout (%ds). Unloading.", self.config.idle_timeout_sec)
             self.unload()

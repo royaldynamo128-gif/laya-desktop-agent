@@ -21,7 +21,7 @@ class VADResult:
 
 
 class VoiceActivityDetector:
-    def __init__(self, sample_rate: int = 16000, aggressiveness: int = 3, frame_duration_ms: int = 30):
+    def __init__(self, sample_rate: int = 16000, aggressiveness: int = 2, frame_duration_ms: int = 30):
         if sample_rate not in (8000, 16000, 32000, 48000):
             raise ValueError(f"Unsupported sample rate for WebRTC VAD: {sample_rate}")
         if frame_duration_ms not in (10, 20, 30):
@@ -32,7 +32,7 @@ class VoiceActivityDetector:
         self.frame_bytes = int(sample_rate * (frame_duration_ms / 1000.0) * 2)  # 16-bit = 2 bytes/sample
         self.vad = webrtcvad.Vad(aggressiveness)
 
-    def process(self, pcm_bytes: bytes, padding_frames: int = 5) -> VADResult:
+    def process(self, pcm_bytes: bytes, padding_frames: int = 8) -> VADResult:
         """Process raw 16-bit PCM bytes: detect speech and trim leading/trailing silence."""
         if not pcm_bytes or len(pcm_bytes) < self.frame_bytes:
             return VADResult(
@@ -58,8 +58,9 @@ class VoiceActivityDetector:
         speech_ratio = voiced_count / num_frames if num_frames > 0 else 0.0
         original_duration = len(pcm_bytes) / (self.sample_rate * 2)
 
-        if voiced_count == 0 or speech_ratio < 0.05:
-            logger.debug("No speech detected (voiced ratio: %.2f)", speech_ratio)
+        # Require at least 3 voiced frames (~90ms) and min speech ratio
+        if voiced_count < 3 or speech_ratio < 0.05:
+            logger.debug("No usable speech detected (voiced frames: %d, ratio: %.2f)", voiced_count, speech_ratio)
             return VADResult(
                 has_speech=False,
                 speech_pcm=b"",

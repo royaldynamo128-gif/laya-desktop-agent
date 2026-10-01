@@ -61,10 +61,61 @@ class KdotoolClient:
             return matches
         return []
 
+    def get_desktop_for_window(self, window_id: str) -> Optional[int]:
+        """Get the virtual desktop number for a window."""
+        res = self._run("get_desktop_for_window", window_id)
+        if res.returncode == 0:
+            out = res.stdout.strip()
+            if out.isdigit():
+                return int(out)
+        return None
+
+    def unminimize_window(self, window_id: str) -> bool:
+        """Remove minimized state from a window so it becomes visible."""
+        res = self._run("windowstate", "--remove", "MINIMIZED", window_id)
+        return res.returncode == 0
+
     def activate_window(self, window_id: str) -> bool:
-        """Activate and bring window to focus."""
+        """Activate and bring window to foreground, unminimizing and switching workspace if needed."""
+        # 1. Unminimize if minimized
+        self.unminimize_window(window_id)
+        
+        # 2. Check virtual desktop and switch if needed
+        win_desktop = self.get_desktop_for_window(window_id)
+        if win_desktop is not None and win_desktop > 0:
+            cur_desktop = self.get_desktop()
+            if win_desktop != cur_desktop:
+                self.set_desktop(win_desktop)
+
+        # 3. Raise to top of window stack
+        self._run("windowraise", window_id)
+
+        # 4. Activate / focus
         res = self._run("windowactivate", window_id)
         return res.returncode == 0
+
+    def search_any(self, patterns: List[str], limit: int = 5, exclude_shell: bool = True) -> List[str]:
+        """Search windows matching any pattern in patterns, filtering out plasmashell if requested."""
+        seen = []
+        for p in patterns:
+            if not p or not p.strip():
+                continue
+            matches = self.search(p.strip(), limit=limit)
+            for m in matches:
+                if m not in seen:
+                    if exclude_shell:
+                        cls_name = self.get_window_class(m).lower()
+                        if cls_name == "plasmashell":
+                            continue
+                    seen.append(m)
+                    if len(seen) >= limit:
+                        return seen
+        return seen
+
+    def is_active_window(self, window_id: str) -> bool:
+        """Check if the given window ID is currently the focused active window."""
+        cur = self.get_active_window()
+        return cur is not None and cur.lower() == window_id.lower()
 
     def close_window(self, window_id: str) -> bool:
         """Gracefully close a window."""

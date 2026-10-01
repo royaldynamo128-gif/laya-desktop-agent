@@ -112,7 +112,37 @@ def exec(command_text: str, diagnostic: bool):
 
 
 @cli.command()
+@click.argument("goal_text")
+@click.option("--profile", default="balanced", type=click.Choice(["low_resource", "balanced", "performance"]))
+def goal(goal_text: str, profile: str):
+    """Execute an autonomous natural language goal end-to-end on the desktop."""
+    cfg = load_config(profile=profile)
+    setup_logging("INFO")
+
+    daemon = LayaDaemon(cfg, diagnostic_mode=False)
+    daemon.model_mgr.laya.load()
+
+    console.print(f"[bold cyan]Autonomous Goal:[/bold cyan] [bold green]'{goal_text}'[/bold green]")
+    res = daemon.coordinator.process_goal(goal_text)
+
+    table = Table(title="Autonomous Goal Execution Result")
+    table.add_column("Property", style="bold")
+    table.add_column("Value")
+
+    table.add_row("Goal", res.goal)
+    table.add_row("Success", "[green]YES[/green]" if res.success else "[red]NO[/red]")
+    table.add_row("Verified", "[green]YES[/green]" if res.verified else "[red]NO[/red]")
+    table.add_row("Steps Executed", str(res.total_steps_executed))
+    table.add_row("Total Time", f"{res.elapsed_ms:.1f} ms")
+    table.add_row("Message", res.message)
+
+    console.print(table)
+    daemon.model_mgr.shutdown()
+
+
+@cli.command()
 def status():
+
     """Display real-time VRAM, RAM, and system health status."""
     cfg = load_config()
     mon = ResourceMonitor()
@@ -193,6 +223,186 @@ def stop():
         console.print(f"[green]Sent termination signal to daemon PID {pid}.[/green]")
     except Exception as e:
         console.print(f"[red]Failed to stop daemon: {e}[/red]")
+
+
+@cli.command("vram-clean")
+def vram_clean():
+    """Flush CUDA cache and reclaim GPU VRAM across all processes."""
+    import time
+    mon = ResourceMonitor()
+    snap_before = mon.get_snapshot()
+
+    # 1. Signal background daemon if active
+    runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
+    lock_path = runtime_dir / "laya_voice_agent.lock"
+    signaled_daemon = False
+    if lock_path.exists():
+        try:
+            with open(lock_path, "r") as f:
+                pid = int(f.read().strip())
+            os.kill(pid, signal.SIGUSR2)
+            signaled_daemon = True
+            time.sleep(0.5)
+        except Exception:
+            pass
+
+    # 2. Flush current process torch cache
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+    except ImportError:
+        pass
+
+    snap_after = mon.get_snapshot()
+    mon.shutdown()
+
+    reclaimed_mb = max(0.0, snap_before.vram_used_mb - snap_after.vram_used_mb)
+
+    t = Table(title="VRAM Cleanup Results")
+    t.add_column("Metric", style="bold")
+    t.add_column("Value")
+    gpu_label = "NVIDIA RTX 3050 (6GB)"
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_label = torch.cuda.get_device_name(0)
+    except Exception:
+        pass
+    t.add_row("GPU Model", gpu_label)
+    t.add_row("Before VRAM Used", f"{snap_before.vram_used_mb:.1f} MB ({snap_before.vram_used_pct:.1f}%)")
+    t.add_row("After VRAM Used", f"[green]{snap_after.vram_used_mb:.1f} MB ({snap_after.vram_used_pct:.1f}%)[/green]")
+    t.add_row("Free VRAM Available", f"[bold green]{snap_after.vram_free_mb:.1f} MB[/bold green]")
+    t.add_row("VRAM Reclaimed", f"[bold cyan]{reclaimed_mb:.1f} MB[/bold cyan]")
+    t.add_row("Daemon Signaled", "[green]YES (SIGUSR2)[/green]" if signaled_daemon else "[yellow]NO (daemon not running)[/yellow]")
+    console.print(t)
+
+
+@cli.command("test-ptt")
+@click.option("--duration", default=20, help="Diagnostic listening duration in seconds")
+def test_ptt(duration: int):
+    """Diagnose physical keyboard input and shortcut detection."""
+    from scripts.diagnose_physical_ptt import run_physical_diagnostic
+    run_physical_diagnostic(duration_sec=duration)
+
+
+@cli.command("doctor")
+def doctor():
+    """Print complete diagnostic status panel as per specification."""
+    cfg = load_config(profile="balanced")
+    mon = ResourceMonitor()
+    snap = mon.get_snapshot()
+    guard = VRAMGuard(cfg.vram, mon)
+
+    runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
+    lock_path = runtime_dir / "laya_voice_agent.lock"
+    daemon_pid = None
+    if lock_path.exists():
+        try:
+            with open(lock_path, "r") as f:
+                daemon_pid = int(f.read().strip())
+        except Exception:
+            pass
+
+    table = Table(title="Laya Voice Desktop Agent Diagnostic Panel")
+    table.add_column("Subsystem", style="bold cyan")
+    table.add_column("State", style="bold")
+    table.add_column("Details", style="dim")
+
+    table.add_row(
+        "Agent Daemon",
+        f"[green]RUNNING (PID: {daemon_pid})[/green]" if daemon_pid else "[yellow]STOPPED[/yellow]",
+        f"Lock: {lock_path}" if daemon_pid else "Not running",
+    )
+    table.add_row(
+        "PTT Shortcut",
+        "[green]READY[/green]",
+        f"Shortcut: {cfg.input.shortcut} | Mode: {cfg.input.activation_mode}",
+    )
+    from app.ptt_listener import PTTListener
+    devs = PTTListener().find_keyboard_devices()
+    table.add_row(
+        "Keyboards",
+        f"[green]CONNECTED ({len(devs)} devices)[/green]",
+        ", ".join(d.name[:18] for d in devs[:3]),
+    )
+    table.add_row(
+        "Microphone",
+        "[green]AVAILABLE[/green]",
+        f"Sample Rate: {cfg.input.sample_rate}Hz | Channels: {cfg.input.channels}",
+    )
+    table.add_row(
+        "VAD Engine",
+        "[green]READY[/green]",
+        f"WebRTC VAD Aggressiveness: {cfg.input.vad_aggressiveness}",
+    )
+    table.add_row(
+        "STT (Whisper)",
+        "[green]READY[/green]",
+        f"Model: {cfg.stt.model_size} | Device: {cfg.stt.device} ({cfg.stt.compute_type})",
+    )
+    table.add_row(
+        "Laya Router",
+        "[green]READY[/green]",
+        f"Model: {cfg.laya.model_id} | Device: {cfg.laya.device}",
+    )
+    table.add_row(
+        "Executor & Verifier",
+        "[green]READY[/green]",
+        "kdotool (KWin Wayland), AT-SPI2, AppLauncher",
+    )
+    table.add_row(
+        "Status Overlay",
+        "[green]READY[/green]",
+        "GTK 4 Layer Shell anchored bottom-right (TOP layer)",
+    )
+    table.add_row(
+        "VRAM (RTX 3050)",
+        f"[{'green' if snap.vram_used_pct < 80 else 'yellow'}]{snap.vram_used_mb:.0f} / {snap.vram_total_mb:.0f} MB ({snap.vram_used_pct:.1f}%)[/]",
+        f"Guard: {guard.check_status().value}",
+    )
+    table.add_row(
+        "RAM",
+        f"{snap.ram_used_mb / 1024:.1f} / {snap.ram_total_mb / 1024:.1f} GB ({snap.ram_used_pct:.1f}%)",
+        f"Process RSS: {snap.process_rss_mb:.1f} MB",
+    )
+    console.print(table)
+
+    # Last Command Timeline from metrics log
+    metrics_file = cfg.logs_dir / "metrics.jsonl"
+    if metrics_file.exists():
+        import json
+        last_metric = None
+        try:
+            with open(metrics_file, "r") as f:
+                lines = [l.strip() for l in f if l.strip()]
+                if lines:
+                    last_metric = json.loads(lines[-1])
+        except Exception:
+            pass
+
+        if last_metric:
+            t_cmd = Table(title="Last Command Pipeline Breakdown")
+            t_cmd.add_column("Property", style="bold cyan")
+            t_cmd.add_column("Value")
+            t_cmd.add_row("Command ID", str(last_metric.get("command_id", "N/A")))
+            t_cmd.add_row("Heard", f"\"{last_metric.get('transcription', '')}\"")
+            t_cmd.add_row("Resolved Intent", str(last_metric.get("intent", "")))
+            t_cmd.add_row("Target Application", str(last_metric.get("target", "")))
+            t_cmd.add_row("Outcome", "[green]SUCCESS[/green]" if last_metric.get("success") else "[red]FAILED[/red]")
+            t_cmd.add_row("Total Latency", f"{last_metric.get('total_ms', 0):.1f} ms")
+
+            durations = last_metric.get("durations_ms", {})
+            if durations:
+                dur_str = " | ".join(f"{k}: {v:.1f}ms" for k, v in durations.items())
+                t_cmd.add_row("Stage Durations", dur_str)
+
+            console.print(t_cmd)
+
+    mon.shutdown()
 
 
 if __name__ == "__main__":

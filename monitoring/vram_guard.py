@@ -25,12 +25,18 @@ class VRAMGuard:
         self.config = config
         self.monitor = monitor or ResourceMonitor()
         self._unload_callbacks: List[Callable[[], None]] = []
+        self._restore_callbacks: List[Callable[[], None]] = []
         self._last_status = VRAMStatus.NORMAL
 
     def register_unload_callback(self, callback: Callable[[], None]) -> None:
         """Register a callback to release GPU models during CRITICAL memory pressure."""
         if callback not in self._unload_callbacks:
             self._unload_callbacks.append(callback)
+
+    def register_restore_callback(self, callback: Callable[[], None]) -> None:
+        """Register a callback to re-promote models to GPU when VRAM normalizes."""
+        if callback not in self._restore_callbacks:
+            self._restore_callbacks.append(callback)
 
     def check_status(self) -> VRAMStatus:
         """Inspect current VRAM utilization and trigger defensive actions if thresholds are exceeded."""
@@ -41,9 +47,24 @@ class VRAMGuard:
         used_pct = snapshot.vram_used_pct
         status = VRAMStatus.NORMAL
 
-        if used_pct >= self.config.critical_threshold_pct:
+        # Check process-level VRAM allocation
+        allocated_mb = 0.0
+        reserved_mb = 0.0
+        try:
+            import torch
+            if torch.cuda.is_available():
+                allocated_mb = torch.cuda.memory_allocated(0) / (1024 * 1024)
+                reserved_mb = torch.cuda.memory_reserved(0) / (1024 * 1024)
+                # If reserved exceeds allocated by > 256MB, proactively flush cache
+                if (reserved_mb - allocated_mb) > 256.0:
+                    torch.cuda.empty_cache()
+                    torch.cuda.ipc_collect()
+        except Exception:
+            pass
+
+        if used_pct >= self.config.critical_threshold_pct or (self.config.max_agent_vram_mb and allocated_mb > self.config.max_agent_vram_mb * 1.25):
             status = VRAMStatus.CRITICAL
-        elif used_pct >= self.config.warning_threshold_pct:
+        elif used_pct >= self.config.warning_threshold_pct or (self.config.max_agent_vram_mb and allocated_mb > self.config.max_agent_vram_mb):
             status = VRAMStatus.WARNING
 
         if status != self._last_status:
@@ -55,12 +76,25 @@ class VRAMGuard:
                 snapshot.vram_total_mb,
                 used_pct,
             )
+            old_status = self._last_status
             self._last_status = status
 
-        if status == VRAMStatus.CRITICAL:
-            self.emergency_cleanup()
+            if status == VRAMStatus.CRITICAL:
+                self.emergency_cleanup()
+            elif status == VRAMStatus.NORMAL and old_status in (VRAMStatus.CRITICAL, VRAMStatus.WARNING):
+                if getattr(self.config, "auto_restore", True):
+                    self.restore_models()
 
         return status
+
+    def restore_models(self) -> None:
+        """Execute model re-promotion to GPU after memory stabilizes."""
+        logger.info("VRAM normalized: Triggering model restoration to GPU...")
+        for cb in self._restore_callbacks:
+            try:
+                cb()
+            except Exception as e:
+                logger.error("Error in restore callback: %s", e)
 
     def can_allocate(self, required_mb: float) -> bool:
         """Check whether allocating required_mb of VRAM will safely stay below thresholds."""

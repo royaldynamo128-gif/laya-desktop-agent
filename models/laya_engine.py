@@ -4,7 +4,7 @@ Uses non-autoregressive ModernBERT (421M params) for sub-35ms structured decisio
 intent classification, safety gating, and post-action observation flags.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Tuple
 import gc
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Intent taxonomy and criteria for Laya
 INTENT_CRITERIA = {
-    "open_application": "User wants to launch, open, or start an application, program, directory, or folder (e.g. Chrome, Telegram, terminal, files, Projects folder, Downloads)",
+    "open_application": "User wants to launch, open, or start an application, program, terminal, directory, or folder (e.g. Chrome, Telegram, terminal, ghostty, files, Projects folder, Downloads)",
     "close_application": "User wants to close, exit, or quit a window or program",
     "switch_window": "User wants to switch to, bring up, or focus an existing window or app (e.g. switch to browser, switch to Opera)",
     "window_action": "User wants to minimize, maximize, resize, or move the current window",
@@ -24,7 +24,7 @@ INTENT_CRITERIA = {
     "screen_query": "User wants to take a screenshot, capture screenshot, screen capture, read screen, or inspect screen",
     "input_action": "User wants to type text, press Enter, press Tab, or send keyboard input",
     "system_setting": "User wants to change audio volume, mute sound, or control media playback",
-    "terminal_command": "User wants to run a specific command in terminal",
+    "terminal_command": "User wants to execute a specific shell command or script (not launching the terminal app)",
     "other": "Ambiguous, unrecognized, conversational, or clarification needed",
 }
 
@@ -39,11 +39,11 @@ SAFETY_CRITERIA = {
 class LayaDecision:
     intent: str
     confidence: float
-    safety_level: str
-    requires_confirmation: bool
-    requires_observation: bool
-    raw_decision: Dict[str, Any]
-    latency_ms: float
+    safety_level: str = "safe"
+    requires_confirmation: bool = False
+    requires_observation: bool = True
+    raw_decision: Dict[str, Any] = field(default_factory=dict)
+    latency_ms: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -150,11 +150,16 @@ class LayaEngine:
             confidence = intent_ans.get("answer_confidence", intent_ans.get("confidence", 0.8))
             safety = safety_ans.get("choice", "safe")
             
-            # Noul answers return calibrated probability
             confirm_prob = confirm_ans.get("noul", 0.0)
             observe_prob = observe_ans.get("noul", 0.8)
 
-            requires_confirm = confirm_prob > 0.5 or safety == "high_risk"
+            # Safe desktop interactions never require confirmation
+            safe_intents = {"open_application", "switch_window", "scroll", "screen_query", "window_action", "system_setting"}
+            if intent in safe_intents:
+                requires_confirm = False
+            else:
+                requires_confirm = (confirm_prob > 0.7 and safety == "high_risk")
+
             requires_observe = observe_prob > 0.4
 
             decision = LayaDecision(
@@ -233,6 +238,8 @@ class LayaEngine:
                 pass
 
     def check_idle(self) -> bool:
+        if self.config.idle_timeout_sec <= 0:
+            return False  # 0 or negative = never unload
         if self.is_loaded and (time.time() - self._last_used_time) > self.config.idle_timeout_sec:
             logger.info("Laya Router exceeded idle timeout (%ds). Unloading.", self.config.idle_timeout_sec)
             self.unload()

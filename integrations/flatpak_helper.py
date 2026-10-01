@@ -23,7 +23,7 @@ DESKTOP_DIRS = [
 
 # Aliases and common voice terms for desktop apps
 STANDARD_ALIASES = {
-    "chrome": ["google chrome", "chrome", "browser", "com.google.chrome"],
+    "chrome": ["google chrome", "chrome", "com.google.chrome"],
     "google chrome": ["google chrome", "chrome"],
     "opera": ["opera", "opera browser"],
     "brave": ["brave", "brave browser"],
@@ -37,6 +37,11 @@ STANDARD_ALIASES = {
     "obsidian": ["obsidian", "notes", "md.obsidian.obsidian"],
     "vlc": ["vlc", "vlc media player", "media player"],
     "calculator": ["kcalc", "calculator"],
+    "settings": ["system settings", "settings", "systemsettings"],
+    "system settings": ["system settings", "settings", "systemsettings"],
+    "kde settings": ["system settings", "settings", "systemsettings"],
+    "notepad": ["kwrite", "kate", "notepad", "text editor"],
+    "text editor": ["kwrite", "kate", "text editor"],
 }
 
 

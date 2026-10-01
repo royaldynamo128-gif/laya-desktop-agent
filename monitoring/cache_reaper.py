@@ -77,11 +77,19 @@ class CacheReaper:
 
     def _enforce_size_limit(self) -> int:
         max_bytes = self.config.cache.max_cache_mb * 1024 * 1024
+        model_dir = self.config.model_cache_dir.resolve()
         total_bytes = 0
         file_list = []
-
         for p in self.cache_dir.rglob("*"):
             if p.is_file() and p.name != ".gitkeep":
+                # NEVER delete model files or weights!
+                try:
+                    resolved = p.resolve()
+                    if str(resolved).startswith(str(model_dir)):
+                        continue
+                except Exception:
+                    continue
+
                 try:
                     s = p.stat()
                     total_bytes += s.st_size

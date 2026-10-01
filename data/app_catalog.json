@@ -1,0 +1,1490 @@
+{
+  "apps": [
+    {
+      "desktop_id": "org.kde.kdenlive.desktop",
+      "name": "Kdenlive",
+      "display_name": "Kdenlive",
+      "exec_cmd": "kdenlive %F",
+      "executable": "kdenlive",
+      "path": "/usr/share/applications/org.kde.kdenlive.desktop",
+      "generic_name": "Video Editor",
+      "comment": "Nonlinear video editor by KDE",
+      "keywords": [
+        "editing",
+        "video",
+        "audio",
+        "mlt",
+        "kde"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "AudioVideo",
+        "AudioVideoEditing"
+      ],
+      "wm_class": "kdenlive",
+      "phonetic_code": "K354"
+    },
+    {
+      "desktop_id": "uxterm.desktop",
+      "name": "UXTerm",
+      "display_name": "UXTerm",
+      "exec_cmd": "uxterm",
+      "executable": "uxterm",
+      "path": "/usr/share/applications/uxterm.desktop",
+      "generic_name": "",
+      "comment": "xterm wrapper for Unicode environments",
+      "keywords": [
+        "shell",
+        "prompt",
+        "command",
+        "commandline",
+        "cmd"
+      ],
+      "categories": [
+        "System",
+        "TerminalEmulator"
+      ],
+      "wm_class": "UXTerm",
+      "phonetic_code": "U236"
+    },
+    {
+      "desktop_id": "assistant.desktop",
+      "name": "Qt Assistant",
+      "display_name": "Qt Assistant",
+      "exec_cmd": "assistant6",
+      "executable": "assistant6",
+      "path": "/usr/share/applications/assistant.desktop",
+      "generic_name": "Documentation viewer",
+      "comment": "View documentation in Qt help file format",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "Development",
+        "Documentation"
+      ],
+      "wm_class": "Qt Assistant",
+      "phonetic_code": "Q322"
+    },
+    {
+      "desktop_id": "org.kde.kmenuedit.desktop",
+      "name": "Menu Editor",
+      "display_name": "Menu Editor",
+      "exec_cmd": "kmenuedit",
+      "executable": "kmenuedit",
+      "path": "/usr/share/applications/org.kde.kmenuedit.desktop",
+      "generic_name": "Menu Editor",
+      "comment": "Edit how applications are presented in app launchers",
+      "keywords": [
+        "kmenuedit"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System"
+      ],
+      "wm_class": "Menu Editor",
+      "phonetic_code": "M533"
+    },
+    {
+      "desktop_id": "kdesystemsettings.desktop",
+      "name": "KDE System Settings",
+      "display_name": "KDE System Settings",
+      "exec_cmd": "systemsettings",
+      "executable": "systemsettings",
+      "path": "/usr/share/applications/kdesystemsettings.desktop",
+      "generic_name": "KDE System Settings",
+      "comment": "Configure KDE Plasma\u2019s behavior and appearance",
+      "keywords": [
+        "systemsettings"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Settings"
+      ],
+      "wm_class": "KDE System Settings",
+      "phonetic_code": "K322"
+    },
+    {
+      "desktop_id": "org.kde.kwrite.desktop",
+      "name": "KWrite",
+      "display_name": "KWrite",
+      "exec_cmd": "kwrite %U",
+      "executable": "kwrite",
+      "path": "/usr/share/applications/org.kde.kwrite.desktop",
+      "generic_name": "Text Editor",
+      "comment": "KDE Text Editor",
+      "keywords": [
+        "text",
+        "txt",
+        "editor",
+        "note",
+        "notepad"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Utility",
+        "TextEditor"
+      ],
+      "wm_class": "kwrite",
+      "phonetic_code": "K630"
+    },
+    {
+      "desktop_id": "io.github.gnhen.midscroll.Settings.desktop",
+      "name": "midscroll Settings",
+      "display_name": "midscroll Settings",
+      "exec_cmd": "midscroll-settings",
+      "executable": "midscroll-settings",
+      "path": "/usr/share/applications/io.github.gnhen.midscroll.Settings.desktop",
+      "generic_name": "Autoscroll Settings",
+      "comment": "Configure midscroll middle-drag autoscroll",
+      "keywords": [
+        "mouse",
+        "scroll",
+        "autoscroll",
+        "wheel"
+      ],
+      "categories": [
+        "Settings",
+        "HardwareSettings"
+      ],
+      "wm_class": "io.github.gnhen.midscroll.Settings",
+      "phonetic_code": "M326"
+    },
+    {
+      "desktop_id": "org.kde.kdeconnect.app.desktop",
+      "name": "KDE Connect",
+      "display_name": "KDE Connect",
+      "exec_cmd": "kdeconnect-app",
+      "executable": "kdeconnect-app",
+      "path": "/usr/share/applications/org.kde.kdeconnect.app.desktop",
+      "generic_name": "Device Synchronization",
+      "comment": "Make all your devices one",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Network"
+      ],
+      "wm_class": "KDE Connect",
+      "phonetic_code": "K325"
+    },
+    {
+      "desktop_id": "org.kde.kdeconnect.nonplasma.desktop",
+      "name": "KDE Connect Indicator",
+      "display_name": "KDE Connect Indicator",
+      "exec_cmd": "kdeconnect-indicator",
+      "executable": "kdeconnect-indicator",
+      "path": "/usr/share/applications/org.kde.kdeconnect.nonplasma.desktop",
+      "generic_name": "",
+      "comment": "Display information about your devices",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Network"
+      ],
+      "wm_class": "KDE Connect Indicator",
+      "phonetic_code": "K325"
+    },
+    {
+      "desktop_id": "opera.desktop",
+      "name": "Opera",
+      "display_name": "Opera",
+      "exec_cmd": "opera %U",
+      "executable": "opera",
+      "path": "/usr/share/applications/opera.desktop",
+      "generic_name": "Web browser",
+      "comment": "Fast and secure web browser",
+      "keywords": [],
+      "categories": [
+        "Network",
+        "WebBrowser"
+      ],
+      "wm_class": "Opera",
+      "phonetic_code": "O160"
+    },
+    {
+      "desktop_id": "bvnc.desktop",
+      "name": "Avahi VNC Server Browser",
+      "display_name": "Avahi VNC Server Browser",
+      "exec_cmd": "/usr/bin/bvnc",
+      "executable": "bvnc",
+      "path": "/usr/share/applications/bvnc.desktop",
+      "generic_name": "",
+      "comment": "Browse for Zeroconf-enabled VNC Servers",
+      "keywords": [],
+      "categories": [
+        "GNOME",
+        "Network"
+      ],
+      "wm_class": "Avahi VNC Server Browser",
+      "phonetic_code": "A115"
+    },
+    {
+      "desktop_id": "brave-browser.desktop",
+      "name": "Brave",
+      "display_name": "Brave",
+      "exec_cmd": "brave %U",
+      "executable": "brave",
+      "path": "/usr/share/applications/brave-browser.desktop",
+      "generic_name": "Web Browser",
+      "comment": "Access the Internet",
+      "keywords": [],
+      "categories": [
+        "Network",
+        "WebBrowser"
+      ],
+      "wm_class": "brave-browser",
+      "phonetic_code": "B610"
+    },
+    {
+      "desktop_id": "htop.desktop",
+      "name": "Htop",
+      "display_name": "Htop",
+      "exec_cmd": "htop",
+      "executable": "htop",
+      "path": "/usr/share/applications/htop.desktop",
+      "generic_name": "Process Viewer",
+      "comment": "Show System Processes",
+      "keywords": [
+        "system",
+        "process",
+        "task",
+        "resources",
+        "monitoring",
+        "performance"
+      ],
+      "categories": [
+        "System",
+        "Monitor",
+        "ConsoleOnly"
+      ],
+      "wm_class": "Htop",
+      "phonetic_code": "H310"
+    },
+    {
+      "desktop_id": "blender.desktop",
+      "name": "Blender",
+      "display_name": "Blender",
+      "exec_cmd": "blender %f",
+      "executable": "blender",
+      "path": "/usr/share/applications/blender.desktop",
+      "generic_name": "3D modeler",
+      "comment": "3D modeling, animation, rendering and post-production",
+      "keywords": [
+        "3d",
+        "cg",
+        "modeling",
+        "animation",
+        "painting",
+        "sculpting",
+        "texturing",
+        "video editing",
+        "video tracking",
+        "rendering",
+        "render engine",
+        "cycles",
+        "python"
+      ],
+      "categories": [
+        "Graphics",
+        "3DGraphics"
+      ],
+      "wm_class": "Blender",
+      "phonetic_code": "B453"
+    },
+    {
+      "desktop_id": "org.kde.spectacle.desktop",
+      "name": "Spectacle",
+      "display_name": "Spectacle",
+      "exec_cmd": "/usr/bin/spectacle",
+      "executable": "spectacle",
+      "path": "/usr/share/applications/org.kde.spectacle.desktop",
+      "generic_name": "Screenshot Capture Utility",
+      "comment": "Take screenshots and screen recordings",
+      "keywords": [
+        "snapshot",
+        "capture",
+        "print",
+        "screenshot",
+        "snipping",
+        "snipping tool",
+        "snip"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Utility"
+      ],
+      "wm_class": "Spectacle",
+      "phonetic_code": "S123"
+    },
+    {
+      "desktop_id": "org.kde.discover.desktop",
+      "name": "Discover",
+      "display_name": "Discover",
+      "exec_cmd": "plasma-discover %F",
+      "executable": "plasma-discover",
+      "path": "/usr/share/applications/org.kde.discover.desktop",
+      "generic_name": "Software Center",
+      "comment": "Install and remove apps and add-ons",
+      "keywords": [
+        "program",
+        "software",
+        "store",
+        "repository",
+        "package",
+        "add",
+        "install",
+        "uninstall",
+        "remove",
+        "update",
+        "apps",
+        "applications",
+        "games",
+        "flatpak",
+        "snap",
+        "addons",
+        "add-ons",
+        "firmware"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System"
+      ],
+      "wm_class": "Discover",
+      "phonetic_code": "D216"
+    },
+    {
+      "desktop_id": "cmake-gui.desktop",
+      "name": "CMake",
+      "display_name": "CMake",
+      "exec_cmd": "cmake-gui %f",
+      "executable": "cmake-gui",
+      "path": "/usr/share/applications/cmake-gui.desktop",
+      "generic_name": "",
+      "comment": "Cross-platform buildsystem",
+      "keywords": [],
+      "categories": [
+        "Development",
+        "Building"
+      ],
+      "wm_class": "CMake",
+      "phonetic_code": "C520"
+    },
+    {
+      "desktop_id": "qvidcap.desktop",
+      "name": "Qt V4L2 video capture utility",
+      "display_name": "Qt V4L2 video capture utility",
+      "exec_cmd": "qvidcap",
+      "executable": "qvidcap",
+      "path": "/usr/share/applications/qvidcap.desktop",
+      "generic_name": "",
+      "comment": "Viewer for video capture",
+      "keywords": [
+        "video",
+        "grabber",
+        "V4L"
+      ],
+      "categories": [
+        "AudioVideo"
+      ],
+      "wm_class": "Qt V4L2 video capture utility",
+      "phonetic_code": "Q314"
+    },
+    {
+      "desktop_id": "qdbusviewer.desktop",
+      "name": "Qt D-Bus Viewer",
+      "display_name": "Qt D-Bus Viewer",
+      "exec_cmd": "qdbusviewer6",
+      "executable": "qdbusviewer6",
+      "path": "/usr/share/applications/qdbusviewer.desktop",
+      "generic_name": "D-Bus Debugger",
+      "comment": "Debug D-Bus applications",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "Development",
+        "Debugger"
+      ],
+      "wm_class": "Qt D-Bus Viewer",
+      "phonetic_code": "Q312"
+    },
+    {
+      "desktop_id": "org.pulseaudio.pavucontrol.desktop",
+      "name": "Volume Control",
+      "display_name": "Volume Control",
+      "exec_cmd": "pavucontrol",
+      "executable": "pavucontrol",
+      "path": "/usr/share/applications/org.pulseaudio.pavucontrol.desktop",
+      "generic_name": "Volume Control",
+      "comment": "Adjust the volume level",
+      "keywords": [
+        "pavucontrol",
+        "PulseAudio",
+        "Microphone",
+        "Volume",
+        "Fade",
+        "Balance",
+        "Headset",
+        "Speakers",
+        "Headphones",
+        "Audio",
+        "Mixer",
+        "Output",
+        "Input",
+        "Devices",
+        "Playback",
+        "Recording",
+        "System Sounds",
+        "Sound Card",
+        "Settings",
+        "Preferences"
+      ],
+      "categories": [
+        "AudioVideo",
+        "Audio",
+        "Mixer",
+        "GTK",
+        "Settings",
+        "X-XFCE-SettingsDialog",
+        "X-XFCE-HardwareSettings"
+      ],
+      "wm_class": "Volume Control",
+      "phonetic_code": "V452"
+    },
+    {
+      "desktop_id": "org.kde.kdeconnect.sms.desktop",
+      "name": "KDE Connect SMS",
+      "display_name": "KDE Connect SMS",
+      "exec_cmd": "kdeconnect-sms",
+      "executable": "kdeconnect-sms",
+      "path": "/usr/share/applications/org.kde.kdeconnect.sms.desktop",
+      "generic_name": "Text Messaging",
+      "comment": "Read and send SMS messages on connected devices",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Network",
+        "InstantMessaging"
+      ],
+      "wm_class": "KDE Connect SMS",
+      "phonetic_code": "K325"
+    },
+    {
+      "desktop_id": "org.kde.ark.desktop",
+      "name": "Ark",
+      "display_name": "Ark",
+      "exec_cmd": "ark %U",
+      "executable": "ark",
+      "path": "/usr/share/applications/org.kde.ark.desktop",
+      "generic_name": "Archiving Tool",
+      "comment": "Work with file archives",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Utility",
+        "Archiving",
+        "Compression",
+        "X-KDE-Utilities-File"
+      ],
+      "wm_class": "ark",
+      "phonetic_code": "A620"
+    },
+    {
+      "desktop_id": "vim.desktop",
+      "name": "Vim",
+      "display_name": "Vim",
+      "exec_cmd": "vim %F",
+      "executable": "vim",
+      "path": "/usr/share/applications/vim.desktop",
+      "generic_name": "Text Editor",
+      "comment": "Edit text files",
+      "keywords": [
+        "Text",
+        "editor"
+      ],
+      "categories": [
+        "Utility",
+        "TextEditor"
+      ],
+      "wm_class": "Vim",
+      "phonetic_code": "V500"
+    },
+    {
+      "desktop_id": "com.github.wwmm.easyeffects.desktop",
+      "name": "Easy Effects",
+      "display_name": "Easy Effects",
+      "exec_cmd": "easyeffects",
+      "executable": "easyeffects",
+      "path": "/usr/share/applications/com.github.wwmm.easyeffects.desktop",
+      "generic_name": "Equalizer, Compressor and Other Audio Effects",
+      "comment": "Simple audio effects",
+      "keywords": [
+        "limiter",
+        "compressor",
+        "reverberation",
+        "equalizer",
+        "autovolume"
+      ],
+      "categories": [
+        "AudioVideo",
+        "Audio"
+      ],
+      "wm_class": "Easy Effects",
+      "phonetic_code": "E212"
+    },
+    {
+      "desktop_id": "linguist.desktop",
+      "name": "Qt Linguist",
+      "display_name": "Qt Linguist",
+      "exec_cmd": "linguist6 %F",
+      "executable": "linguist6",
+      "path": "/usr/share/applications/linguist.desktop",
+      "generic_name": "",
+      "comment": "Add translations to Qt applications",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "Development"
+      ],
+      "wm_class": "Qt Linguist",
+      "phonetic_code": "Q345"
+    },
+    {
+      "desktop_id": "lstopo.desktop",
+      "name": "Hardware Locality lstopo",
+      "display_name": "Hardware Locality lstopo",
+      "exec_cmd": "lstopo",
+      "executable": "lstopo",
+      "path": "/usr/share/applications/lstopo.desktop",
+      "generic_name": "",
+      "comment": "Show hardware topology",
+      "keywords": [
+        "System",
+        "Utility"
+      ],
+      "categories": [
+        "System",
+        "Monitor"
+      ],
+      "wm_class": "Hardware Locality lstopo",
+      "phonetic_code": "H636"
+    },
+    {
+      "desktop_id": "org.kde.plasma-welcome.desktop",
+      "name": "Welcome Center",
+      "display_name": "Welcome Center",
+      "exec_cmd": "plasma-welcome",
+      "executable": "plasma-welcome",
+      "path": "/usr/share/applications/org.kde.plasma-welcome.desktop",
+      "generic_name": "Welcome Center",
+      "comment": "Learn more about KDE Plasma",
+      "keywords": [
+        "Welcome",
+        "Wizard",
+        "Onboarding",
+        "Contribute",
+        "Get involved"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Documentation"
+      ],
+      "wm_class": "Welcome Center",
+      "phonetic_code": "W425"
+    },
+    {
+      "desktop_id": "nm-connection-editor.desktop",
+      "name": "Advanced Network Configuration",
+      "display_name": "Advanced Network Configuration",
+      "exec_cmd": "nm-connection-editor",
+      "executable": "nm-connection-editor",
+      "path": "/usr/share/applications/nm-connection-editor.desktop",
+      "generic_name": "",
+      "comment": "Manage and change your network connection settings",
+      "keywords": [],
+      "categories": [
+        "GNOME",
+        "GTK",
+        "Settings",
+        "X-GNOME-NetworkSettings",
+        "X-GNOME-Utilities"
+      ],
+      "wm_class": "Advanced Network Configuration",
+      "phonetic_code": "A315"
+    },
+    {
+      "desktop_id": "qv4l2.desktop",
+      "name": "Qt V4L2 test Utility",
+      "display_name": "Qt V4L2 test Utility",
+      "exec_cmd": "qv4l2",
+      "executable": "qv4l2",
+      "path": "/usr/share/applications/qv4l2.desktop",
+      "generic_name": "",
+      "comment": "Allow testing Video4Linux devices",
+      "keywords": [
+        "video",
+        "grabber",
+        "V4L"
+      ],
+      "categories": [
+        "AudioVideo"
+      ],
+      "wm_class": "Qt V4L2 test Utility",
+      "phonetic_code": "Q314"
+    },
+    {
+      "desktop_id": "org.kde.dolphin.desktop",
+      "name": "Dolphin",
+      "display_name": "Dolphin",
+      "exec_cmd": "dolphin %u",
+      "executable": "dolphin",
+      "path": "/usr/share/applications/org.kde.dolphin.desktop",
+      "generic_name": "File Manager",
+      "comment": "Manage your files",
+      "keywords": [
+        "files",
+        "file management",
+        "file browsing",
+        "samba",
+        "network shares",
+        "Explorer",
+        "Finder"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System",
+        "FileTools",
+        "FileManager"
+      ],
+      "wm_class": "dolphin",
+      "phonetic_code": "D415"
+    },
+    {
+      "desktop_id": "org.kde.plasma.emojier.desktop",
+      "name": "Emoji Selector",
+      "display_name": "Emoji Selector",
+      "exec_cmd": "plasma-emojier",
+      "executable": "plasma-emojier",
+      "path": "/usr/share/applications/org.kde.plasma.emojier.desktop",
+      "generic_name": "Emoji Selector",
+      "comment": "Copy emojis to the clipboard",
+      "keywords": [
+        "characters",
+        "unicode",
+        "punctuation",
+        "letters",
+        "emoji",
+        "emoticon",
+        "symbols",
+        "smiley face"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Utility"
+      ],
+      "wm_class": "Emoji Selector",
+      "phonetic_code": "E522"
+    },
+    {
+      "desktop_id": "com.mitchellh.ghostty.desktop",
+      "name": "Ghostty",
+      "display_name": "Ghostty",
+      "exec_cmd": "/usr/bin/ghostty --gtk-single-instance=true",
+      "executable": "ghostty",
+      "path": "/usr/share/applications/com.mitchellh.ghostty.desktop",
+      "generic_name": "",
+      "comment": "A terminal emulator",
+      "keywords": [
+        "terminal",
+        "tty",
+        "pty"
+      ],
+      "categories": [
+        "System",
+        "TerminalEmulator"
+      ],
+      "wm_class": "com.mitchellh.ghostty",
+      "phonetic_code": "G230"
+    },
+    {
+      "desktop_id": "nemo.desktop",
+      "name": "Files",
+      "display_name": "Files",
+      "exec_cmd": "nemo %U",
+      "executable": "nemo",
+      "path": "/usr/share/applications/nemo.desktop",
+      "generic_name": "",
+      "comment": "Access and organize files",
+      "keywords": [
+        "folders",
+        "filesystem",
+        "explorer"
+      ],
+      "categories": [
+        "GNOME",
+        "GTK",
+        "Utility",
+        "Core"
+      ],
+      "wm_class": "Files",
+      "phonetic_code": "F420"
+    },
+    {
+      "desktop_id": "mpv.desktop",
+      "name": "mpv Media Player",
+      "display_name": "mpv Media Player",
+      "exec_cmd": "mpv --player-operation-mode=pseudo-gui -- %U",
+      "executable": "mpv",
+      "path": "/usr/share/applications/mpv.desktop",
+      "generic_name": "Multimedia player",
+      "comment": "Play movies and songs",
+      "keywords": [
+        "mpv",
+        "media",
+        "player",
+        "video",
+        "audio",
+        "tv"
+      ],
+      "categories": [
+        "AudioVideo",
+        "Audio",
+        "Video",
+        "Player",
+        "TV"
+      ],
+      "wm_class": "mpv",
+      "phonetic_code": "M153"
+    },
+    {
+      "desktop_id": "org.kde.drkonqi.coredump.gui.desktop",
+      "name": "Crashed Processes Viewer",
+      "display_name": "Crashed Processes Viewer",
+      "exec_cmd": "drkonqi-coredump-gui",
+      "executable": "drkonqi-coredump-gui",
+      "path": "/usr/share/applications/org.kde.drkonqi.coredump.gui.desktop",
+      "generic_name": "Crashed Processes Viewer",
+      "comment": "Offers detailed view of past crashes",
+      "keywords": [
+        "drkonqi",
+        "crash",
+        "coredumpd",
+        "bug"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System"
+      ],
+      "wm_class": "Crashed Processes Viewer",
+      "phonetic_code": "C623"
+    },
+    {
+      "desktop_id": "org.kde.kcalc.desktop",
+      "name": "KCalc",
+      "display_name": "KCalc",
+      "exec_cmd": "kcalc",
+      "executable": "kcalc",
+      "path": "/usr/share/applications/org.kde.kcalc.desktop",
+      "generic_name": "Scientific Calculator",
+      "comment": "Calculator which offers many mathematical functions, such as trigonometric functions, logic operations, and statistical calculations",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Utility",
+        "Calculator",
+        "X-KDE-Utilities-Desktop"
+      ],
+      "wm_class": "KCalc",
+      "phonetic_code": "K420"
+    },
+    {
+      "desktop_id": "bssh.desktop",
+      "name": "Avahi SSH Server Browser",
+      "display_name": "Avahi SSH Server Browser",
+      "exec_cmd": "/usr/bin/bssh",
+      "executable": "bssh",
+      "path": "/usr/share/applications/bssh.desktop",
+      "generic_name": "",
+      "comment": "Browse for Zeroconf-enabled SSH Servers",
+      "keywords": [],
+      "categories": [
+        "GNOME",
+        "Network"
+      ],
+      "wm_class": "Avahi SSH Server Browser",
+      "phonetic_code": "A122"
+    },
+    {
+      "desktop_id": "designer.desktop",
+      "name": "Qt Widgets Designer",
+      "display_name": "Qt Widgets Designer",
+      "exec_cmd": "designer6 %F",
+      "executable": "designer6",
+      "path": "/usr/share/applications/designer.desktop",
+      "generic_name": "Interface Designer",
+      "comment": "Design GUIs for Qt applications",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "Development"
+      ],
+      "wm_class": "Qt Widgets Designer",
+      "phonetic_code": "Q332"
+    },
+    {
+      "desktop_id": "xterm.desktop",
+      "name": "XTerm",
+      "display_name": "XTerm",
+      "exec_cmd": "xterm",
+      "executable": "xterm",
+      "path": "/usr/share/applications/xterm.desktop",
+      "generic_name": "",
+      "comment": "standard terminal emulator for the X window system",
+      "keywords": [
+        "shell",
+        "prompt",
+        "command",
+        "commandline",
+        "cmd"
+      ],
+      "categories": [
+        "System",
+        "TerminalEmulator"
+      ],
+      "wm_class": "XTerm",
+      "phonetic_code": "X365"
+    },
+    {
+      "desktop_id": "org.kde.plasma-systemmonitor.desktop",
+      "name": "System Monitor",
+      "display_name": "System Monitor",
+      "exec_cmd": "plasma-systemmonitor",
+      "executable": "plasma-systemmonitor",
+      "path": "/usr/share/applications/org.kde.plasma-systemmonitor.desktop",
+      "generic_name": "System Monitor",
+      "comment": "Monitor app and system resource usage",
+      "keywords": [
+        "task",
+        "manager",
+        "process",
+        "cpu",
+        "memory"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System"
+      ],
+      "wm_class": "System Monitor",
+      "phonetic_code": "S235"
+    },
+    {
+      "desktop_id": "org.kde.konsole.desktop",
+      "name": "Konsole",
+      "display_name": "Konsole",
+      "exec_cmd": "konsole",
+      "executable": "konsole",
+      "path": "/usr/share/applications/org.kde.konsole.desktop",
+      "generic_name": "Terminal",
+      "comment": "Use the command line",
+      "keywords": [
+        "terminal",
+        "console",
+        "script",
+        "run",
+        "execute",
+        "command",
+        "command-line",
+        "commandline",
+        "cli",
+        "bash",
+        "sh",
+        "shell",
+        "zsh",
+        "cmd",
+        "command prompt",
+        "xterm",
+        "tty",
+        "pty",
+        "fish",
+        "konsole"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System",
+        "TerminalEmulator"
+      ],
+      "wm_class": "konsole",
+      "phonetic_code": "K524"
+    },
+    {
+      "desktop_id": "kitty.desktop",
+      "name": "kitty",
+      "display_name": "kitty",
+      "exec_cmd": "kitty",
+      "executable": "kitty",
+      "path": "/usr/share/applications/kitty.desktop",
+      "generic_name": "Terminal emulator",
+      "comment": "Fast, feature-rich, GPU based terminal",
+      "keywords": [],
+      "categories": [
+        "System",
+        "TerminalEmulator"
+      ],
+      "wm_class": "kitty",
+      "phonetic_code": "K300"
+    },
+    {
+      "desktop_id": "systemsettings.desktop",
+      "name": "System Settings",
+      "display_name": "System Settings",
+      "exec_cmd": "systemsettings",
+      "executable": "systemsettings",
+      "path": "/usr/share/applications/systemsettings.desktop",
+      "generic_name": "System Settings",
+      "comment": "Configure the system\u2019s behavior and appearance",
+      "keywords": [
+        "systemsettings"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Settings"
+      ],
+      "wm_class": "System Settings",
+      "phonetic_code": "S235"
+    },
+    {
+      "desktop_id": "org.kde.kate.desktop",
+      "name": "Kate",
+      "display_name": "Kate",
+      "exec_cmd": "kate -b %U",
+      "executable": "kate",
+      "path": "/usr/share/applications/org.kde.kate.desktop",
+      "generic_name": "Advanced Text Editor",
+      "comment": "KDE Advanced Text Editor",
+      "keywords": [
+        "text",
+        "txt",
+        "editor",
+        "programming",
+        "programmer",
+        "development",
+        "developer",
+        "code"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Development",
+        "TextEditor"
+      ],
+      "wm_class": "kate",
+      "phonetic_code": "K300"
+    },
+    {
+      "desktop_id": "org.kde.kinfocenter.desktop",
+      "name": "Info Center",
+      "display_name": "Info Center",
+      "exec_cmd": "kinfocenter",
+      "executable": "kinfocenter",
+      "path": "/usr/share/applications/org.kde.kinfocenter.desktop",
+      "generic_name": "Info Center",
+      "comment": "Learn about the system's hardware and status",
+      "keywords": [
+        "kinfocenter"
+      ],
+      "categories": [
+        "Qt",
+        "KDE",
+        "System",
+        "Documentation"
+      ],
+      "wm_class": "Info Center",
+      "phonetic_code": "I512"
+    },
+    {
+      "desktop_id": "org.kde.gwenview.desktop",
+      "name": "Gwenview",
+      "display_name": "Gwenview",
+      "exec_cmd": "gwenview %U",
+      "executable": "gwenview",
+      "path": "/usr/share/applications/org.kde.gwenview.desktop",
+      "generic_name": "Image Viewer",
+      "comment": "A simple image viewer",
+      "keywords": [],
+      "categories": [
+        "Qt",
+        "KDE",
+        "Graphics",
+        "Viewer",
+        "Photography"
+      ],
+      "wm_class": "Gwenview",
+      "phonetic_code": "G510"
+    },
+    {
+      "desktop_id": "avahi-discover.desktop",
+      "name": "Avahi Zeroconf Browser",
+      "display_name": "Avahi Zeroconf Browser",
+      "exec_cmd": "/usr/bin/avahi-discover",
+      "executable": "avahi-discover",
+      "path": "/usr/share/applications/avahi-discover.desktop",
+      "generic_name": "",
+      "comment": "Browse for Zeroconf services available on your network",
+      "keywords": [],
+      "categories": [
+        "GNOME",
+        "System"
+      ],
+      "wm_class": "Avahi Zeroconf Browser",
+      "phonetic_code": "A126"
+    },
+    {
+      "desktop_id": "org.videolan.VLC.desktop",
+      "name": "VLC media player",
+      "display_name": "VLC media player",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/vlc --file-forwarding org.videolan.VLC --started-from-file @@u %U @@",
+      "executable": "/app/bin/vlc",
+      "path": "/var/lib/flatpak/exports/share/applications/org.videolan.VLC.desktop",
+      "generic_name": "Media player",
+      "comment": "Read, capture, broadcast your multimedia streams",
+      "keywords": [
+        "Player",
+        "Capture",
+        "DVD",
+        "Audio",
+        "Video",
+        "Server",
+        "Broadcast"
+      ],
+      "categories": [
+        "AudioVideo",
+        "Player",
+        "Recorder"
+      ],
+      "wm_class": "VLC",
+      "phonetic_code": "V425"
+    },
+    {
+      "desktop_id": "org.chromium.Chromium.desktop",
+      "name": "Chromium",
+      "display_name": "Chromium",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/chromium --file-forwarding org.chromium.Chromium @@u %U @@",
+      "executable": "/app/bin/chromium",
+      "path": "/var/lib/flatpak/exports/share/applications/org.chromium.Chromium.desktop",
+      "generic_name": "Web Browser",
+      "comment": "Access the Internet",
+      "keywords": [
+        "chrome",
+        "internet",
+        "google"
+      ],
+      "categories": [
+        "Network",
+        "WebBrowser"
+      ],
+      "wm_class": "chromium-browser",
+      "phonetic_code": "C655"
+    },
+    {
+      "desktop_id": "md.obsidian.Obsidian.desktop",
+      "name": "Obsidian",
+      "display_name": "Obsidian",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=obsidian.sh --file-forwarding md.obsidian.Obsidian @@u %U @@",
+      "executable": "obsidian.sh",
+      "path": "/var/lib/flatpak/exports/share/applications/md.obsidian.Obsidian.desktop",
+      "generic_name": "",
+      "comment": "Obsidian",
+      "keywords": [],
+      "categories": [
+        "Office"
+      ],
+      "wm_class": "md.obsidian.Obsidian",
+      "phonetic_code": "O123"
+    },
+    {
+      "desktop_id": "org.gnome.Snapshot.desktop",
+      "name": "Camera",
+      "display_name": "Camera",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=snapshot org.gnome.Snapshot",
+      "executable": "snapshot",
+      "path": "/var/lib/flatpak/exports/share/applications/org.gnome.Snapshot.desktop",
+      "generic_name": "",
+      "comment": "Take pictures and videos",
+      "keywords": [
+        "picture",
+        "photos",
+        "camera",
+        "webcam",
+        "snapshot"
+      ],
+      "categories": [
+        "AudioVideo",
+        "Video",
+        "Recorder",
+        "GNOME",
+        "GTK"
+      ],
+      "wm_class": "Camera",
+      "phonetic_code": "C560"
+    },
+    {
+      "desktop_id": "com.heroicgameslauncher.hgl.desktop",
+      "name": "Heroic Games Launcher",
+      "display_name": "Heroic Games Launcher",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=heroic-run --file-forwarding com.heroicgameslauncher.hgl @@u %u @@",
+      "executable": "heroic-run",
+      "path": "/var/lib/flatpak/exports/share/applications/com.heroicgameslauncher.hgl.desktop",
+      "generic_name": "",
+      "comment": "An Open Source GOG and Epic Games launcher",
+      "keywords": [],
+      "categories": [
+        "Game",
+        "PackageManager"
+      ],
+      "wm_class": "heroic",
+      "phonetic_code": "H625"
+    },
+    {
+      "desktop_id": "io.speedofsound.SpeedOfSound.desktop",
+      "name": "Speed of Sound",
+      "display_name": "Speed of Sound",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=speedofsound io.speedofsound.SpeedOfSound",
+      "executable": "speedofsound",
+      "path": "/var/lib/flatpak/exports/share/applications/io.speedofsound.SpeedOfSound.desktop",
+      "generic_name": "",
+      "comment": "Voice typing for the Linux desktop",
+      "keywords": [
+        "voice",
+        "typing",
+        "dictation",
+        "transcription",
+        "speech",
+        "microphone",
+        "whisper"
+      ],
+      "categories": [
+        "Utility",
+        "Accessibility"
+      ],
+      "wm_class": "Speed of Sound",
+      "phonetic_code": "S131"
+    },
+    {
+      "desktop_id": "com.valvesoftware.Steam.desktop",
+      "name": "Steam",
+      "display_name": "Steam",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/steam --file-forwarding com.valvesoftware.Steam @@u %U @@",
+      "executable": "/app/bin/steam",
+      "path": "/var/lib/flatpak/exports/share/applications/com.valvesoftware.Steam.desktop",
+      "generic_name": "",
+      "comment": "Application for managing and playing games on Steam",
+      "keywords": [],
+      "categories": [
+        "Network",
+        "FileTransfer",
+        "Game"
+      ],
+      "wm_class": "Steam",
+      "phonetic_code": "S350"
+    },
+    {
+      "desktop_id": "net.ankiweb.Anki.desktop",
+      "name": "Anki",
+      "display_name": "Anki",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=anki --file-forwarding net.ankiweb.Anki @@ %f @@",
+      "executable": "anki",
+      "path": "/var/lib/flatpak/exports/share/applications/net.ankiweb.Anki.desktop",
+      "generic_name": "Flashcards",
+      "comment": "An intelligent spaced-repetition memory training program",
+      "keywords": [],
+      "categories": [
+        "Education",
+        "Languages",
+        "KDE",
+        "Qt"
+      ],
+      "wm_class": "anki",
+      "phonetic_code": "A520"
+    },
+    {
+      "desktop_id": "com.google.Chrome.desktop",
+      "name": "Google Chrome",
+      "display_name": "Google Chrome",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=/app/bin/chrome --file-forwarding com.google.Chrome @@u %U @@",
+      "executable": "/app/bin/chrome",
+      "path": "/var/lib/flatpak/exports/share/applications/com.google.Chrome.desktop",
+      "generic_name": "Web Browser",
+      "comment": "Access the Internet",
+      "keywords": [],
+      "categories": [
+        "Network",
+        "WebBrowser"
+      ],
+      "wm_class": "google-chrome",
+      "phonetic_code": "G242"
+    },
+    {
+      "desktop_id": "org.upscayl.Upscayl.desktop",
+      "name": "Upscayl",
+      "display_name": "Upscayl",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=upscayl-run --file-forwarding org.upscayl.Upscayl @@u %U @@",
+      "executable": "upscayl-run",
+      "path": "/var/lib/flatpak/exports/share/applications/org.upscayl.Upscayl.desktop",
+      "generic_name": "",
+      "comment": "Upscale Images with AI",
+      "keywords": [],
+      "categories": [
+        "ImageProcessing",
+        "RasterGraphics",
+        "Graphics"
+      ],
+      "wm_class": "Upscayl",
+      "phonetic_code": "U124"
+    },
+    {
+      "desktop_id": "io.github.shiftey.Desktop.desktop",
+      "name": "GitHub Desktop",
+      "display_name": "GitHub Desktop",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=start-github-desktop --file-forwarding io.github.shiftey.Desktop @@u %U @@",
+      "executable": "start-github-desktop",
+      "path": "/var/lib/flatpak/exports/share/applications/io.github.shiftey.Desktop.desktop",
+      "generic_name": "",
+      "comment": "Simple collaboration from your desktop",
+      "keywords": [],
+      "categories": [
+        "Development"
+      ],
+      "wm_class": "GitHub Desktop",
+      "phonetic_code": "G313"
+    },
+    {
+      "desktop_id": "voice_type_toggle.desktop",
+      "name": "Toggle Voice Dictation",
+      "display_name": "Toggle Voice Dictation",
+      "exec_cmd": "/bin/bash /home/rai/Projects/voice-type/voice_type_toggle.sh",
+      "executable": "bash",
+      "path": "/home/rai/.local/share/applications/voice_type_toggle.desktop",
+      "generic_name": "",
+      "comment": "",
+      "keywords": [],
+      "categories": [],
+      "wm_class": "Toggle Voice Dictation",
+      "phonetic_code": "T241"
+    },
+    {
+      "desktop_id": "antigravity-ide.desktop",
+      "name": "Antigravity IDE",
+      "display_name": "Antigravity IDE",
+      "exec_cmd": "\"/home/rai/Applications/Antigravity IDE/antigravity-ide\" %U",
+      "executable": "Antigravity",
+      "path": "/home/rai/.local/share/applications/antigravity-ide.desktop",
+      "generic_name": "",
+      "comment": "Google Antigravity IDE - Integrated Development Environment",
+      "keywords": [],
+      "categories": [
+        "Development"
+      ],
+      "wm_class": "antigravity-ide",
+      "phonetic_code": "A532"
+    },
+    {
+      "desktop_id": "mouse-speed-booster.desktop",
+      "name": "Mouse Speed Booster",
+      "display_name": "Mouse Speed Booster",
+      "exec_cmd": "/home/rai/.local/bin/mouse-speed-booster",
+      "executable": "mouse-speed-booster",
+      "path": "/home/rai/.local/share/applications/mouse-speed-booster.desktop",
+      "generic_name": "Mouse Sensitivity Booster",
+      "comment": "Boost and fine-tune mouse cursor speed beyond KDE maximum limit",
+      "keywords": [
+        "mouse",
+        "speed",
+        "sensitivity",
+        "cursor",
+        "pointer",
+        "boost",
+        "fast",
+        "high",
+        "acceleration"
+      ],
+      "categories": [
+        "Settings",
+        "HardwareSettings"
+      ],
+      "wm_class": "mouse-speed-booster",
+      "phonetic_code": "M221"
+    },
+    {
+      "desktop_id": "hermes-desktop.desktop",
+      "name": "Hermes One",
+      "display_name": "Hermes One",
+      "exec_cmd": "/home/rai/Applications/hermes-desktop/AppRun --no-sandbox %U",
+      "executable": "AppRun",
+      "path": "/home/rai/.local/share/applications/hermes-desktop.desktop",
+      "generic_name": "",
+      "comment": "Hermes One is a native desktop app for installing, configuring, and chatting with Hermes Agent \u2014 a self-improving AI assistant with tool use, multi-platform messaging, and a closed learning loop.",
+      "keywords": [],
+      "categories": [
+        "Utility"
+      ],
+      "wm_class": "Hermes One",
+      "phonetic_code": "H652"
+    },
+    {
+      "desktop_id": "sync-browser-google-accounts.desktop",
+      "name": "Sync Browser Google Accounts",
+      "display_name": "Sync Browser Google Accounts",
+      "exec_cmd": "/home/rai/.local/bin/sync-browser-google-accounts",
+      "executable": "sync-browser-google-accounts",
+      "path": "/home/rai/.local/share/applications/sync-browser-google-accounts.desktop",
+      "generic_name": "",
+      "comment": "Synchronize Google accounts from Chrome into Chromium and Firefox",
+      "keywords": [],
+      "categories": [
+        "Utility",
+        "Network"
+      ],
+      "wm_class": "Sync Browser Google Accounts",
+      "phonetic_code": "S521"
+    },
+    {
+      "desktop_id": "voice_type_upgrade.desktop",
+      "name": "Voice Type \u2014 Upgrade Version",
+      "display_name": "Voice Type \u2014 Upgrade Version",
+      "exec_cmd": "konsole --hold -e bash /home/rai/Scripts/voice_type_upgrade.sh",
+      "executable": "konsole",
+      "path": "/home/rai/.local/share/applications/voice_type_upgrade.desktop",
+      "generic_name": "",
+      "comment": "Stop the current Voice Type daemon, pick a new df-main version from Downloads, deploy and restart automatically",
+      "keywords": [
+        "voice",
+        "upgrade",
+        "switch",
+        "version",
+        "dictation"
+      ],
+      "categories": [
+        "Utility",
+        "System"
+      ],
+      "wm_class": "Voice Type \u2014 Upgrade Version",
+      "phonetic_code": "V231"
+    },
+    {
+      "desktop_id": "antigravity.desktop",
+      "name": "Antigravity",
+      "display_name": "Antigravity",
+      "exec_cmd": "\"/home/rai/Applications/Antigravity-x64/antigravity\" %U",
+      "executable": "antigravity\"",
+      "path": "/home/rai/.local/share/applications/antigravity.desktop",
+      "generic_name": "",
+      "comment": "Google Antigravity - Advanced Agentic Coding Assistant",
+      "keywords": [],
+      "categories": [
+        "Development"
+      ],
+      "wm_class": "antigravity",
+      "phonetic_code": "A532"
+    },
+    {
+      "desktop_id": "polonium-settings.desktop",
+      "name": "Polonium Settings",
+      "display_name": "Polonium Settings",
+      "exec_cmd": "qdbus6 org.kde.kglobalaccel /component/kwin invokeShortcut \"PoloniumToggleSettingsMenu\"",
+      "executable": "qdbus6",
+      "path": "/home/rai/.local/share/applications/polonium-settings.desktop",
+      "generic_name": "",
+      "comment": "Opens Polonium per-desktop settings",
+      "keywords": [],
+      "categories": [
+        "Settings"
+      ],
+      "wm_class": "Polonium Settings",
+      "phonetic_code": "P455"
+    },
+    {
+      "desktop_id": "org.telegram.desktop.desktop",
+      "name": "Telegram",
+      "display_name": "Telegram",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=Telegram --file-forwarding org.telegram.desktop -- @@u %U @@",
+      "executable": "Telegram",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/org.telegram.desktop.desktop",
+      "generic_name": "",
+      "comment": "New era of messaging",
+      "keywords": [
+        "tg",
+        "chat",
+        "im",
+        "messaging",
+        "messenger",
+        "sms",
+        "tdesktop"
+      ],
+      "categories": [
+        "Chat",
+        "Network",
+        "InstantMessaging",
+        "Qt"
+      ],
+      "wm_class": "TelegramDesktop",
+      "phonetic_code": "T426"
+    },
+    {
+      "desktop_id": "io.github.denysmb.unify.desktop",
+      "name": "Unify",
+      "display_name": "Unify",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=unify io.github.denysmb.unify",
+      "executable": "unify",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/io.github.denysmb.unify.desktop",
+      "generic_name": "",
+      "comment": "Web app aggregator",
+      "keywords": [],
+      "categories": [
+        "Network"
+      ],
+      "wm_class": "Unify",
+      "phonetic_code": "U510"
+    },
+    {
+      "desktop_id": "org.mozilla.firefox.desktop",
+      "name": "Firefox",
+      "display_name": "Firefox",
+      "exec_cmd": "/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=firefox --file-forwarding org.mozilla.firefox @@u %u @@",
+      "executable": "firefox",
+      "path": "/home/rai/.local/share/flatpak/exports/share/applications/org.mozilla.firefox.desktop",
+      "generic_name": "Web Browser",
+      "comment": "Fast and private browser",
+      "keywords": [
+        "Internet",
+        "WWW",
+        "Browser",
+        "Web",
+        "Explorer"
+      ],
+      "categories": [
+        "GNOME",
+        "GTK",
+        "Network",
+        "WebBrowser"
+      ],
+      "wm_class": "firefox",
+      "phonetic_code": "F612"
+    }
+  ]
+}

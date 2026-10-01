@@ -16,13 +16,12 @@ class DBusClient:
         self.qdbus_tool = shutil.which("qdbus6") or shutil.which("qdbus") or shutil.which("busctl")
 
     def show_notification(self, title: str, message: str, app_name: str = "Laya Agent", timeout_ms: int = 3000) -> bool:
-        """Show desktop notification via notify-send or DBus."""
+        """Show desktop notification via notify-send or DBus asynchronously."""
         notify_send = shutil.which("notify-send")
         if notify_send:
             try:
-                subprocess.run(
+                subprocess.Popen(
                     [notify_send, "-a", app_name, "-t", str(timeout_ms), title, message],
-                    check=False,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )

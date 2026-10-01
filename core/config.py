@@ -40,6 +40,7 @@ class VRAMConfig(BaseModel):
     critical_threshold_pct: float = Field(default=85.0, description="Total GPU VRAM utilization triggering emergency unload")
     poll_interval_sec: float = Field(default=2.0)
     auto_downgrade: bool = Field(default=True)
+    auto_restore: bool = Field(default=True, description="Automatically restore models to CUDA when VRAM returns to normal")
 
 
 class RAMConfig(BaseModel):
@@ -80,6 +81,23 @@ class LoggingConfig(BaseModel):
     backup_count: int = Field(default=3)
 
 
+class PlannerConfig(BaseModel):
+    backend: Literal["auto", "rule", "local", "api"] = Field(default="auto")
+    model_name: str = Field(default="qwen2.5:3b")
+    api_url: str = Field(default="http://localhost:11434/v1/chat/completions")
+    api_key: str = Field(default="")
+    max_retries_per_step: int = Field(default=3)
+    method_switch_threshold: int = Field(default=2)
+    single_action_fast_path: bool = Field(default=True)
+
+
+class GoalConfig(BaseModel):
+    autonomous_mode: bool = Field(default=True)
+    max_total_steps: int = Field(default=20)
+    max_total_duration_sec: float = Field(default=120.0)
+    verify_after_every_step: bool = Field(default=True)
+
+
 class AgentConfig(BaseModel):
     profile: Literal["low_resource", "balanced", "performance"] = Field(default="balanced")
     stt: STTConfig = Field(default_factory=STTConfig)
@@ -91,6 +109,9 @@ class AgentConfig(BaseModel):
     input: InputConfig = Field(default_factory=InputConfig)
     safety: SafetyConfig = Field(default_factory=SafetyConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    planner: PlannerConfig = Field(default_factory=PlannerConfig)
+    goal: GoalConfig = Field(default_factory=GoalConfig)
+
 
     # Path properties
     @property

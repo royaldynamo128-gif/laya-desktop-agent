@@ -4,6 +4,7 @@ Executes repeated multi-stage voice and routing cycles to verify zero progressiv
 """
 
 from typing import List, Dict, Any
+from pathlib import Path
 import gc
 import json
 import logging
@@ -128,6 +129,11 @@ def run_stress_test(cycles: int = 50, profile: str = "balanced") -> Dict[str, An
 
     report_path = config.logs_dir / "vram_stress_test_report.json"
     with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    evidence_path = Path("/home/rai/Anti-Gravity/evidence/vram_stress_test_report.json")
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(evidence_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
     console.print(f"\n[bold]Stress Test Verdict:[/bold] {'[green]PASSED (Zero Progressive Leakage)[/green]' if summary['stable'] else '[red]FAILED (Memory Leak Detected)[/red]'}")
