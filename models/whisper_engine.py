@@ -147,9 +147,12 @@ class WhisperEngine:
         audio_data: Union[str, Path, bytes, np.ndarray],
         initial_prompt: Optional[str] = None,
         hotwords: Optional[str] = None,
-        beam_size: int = 5,
+        beam_size: Optional[int] = None,
     ) -> TranscriptionResult:
-        """Transcribe audio with beam search, dynamic vocabulary biasing, and peak normalization."""
+        """Transcribe audio with beam search, dynamic vocabulary biasing, and peak normalization.
+        beam_size defaults to the configured value (1 = fast path for short commands)."""
+        if beam_size is None:
+            beam_size = getattr(self.config, "beam_size", 1)
         if not self.is_loaded:
             self.load()
 

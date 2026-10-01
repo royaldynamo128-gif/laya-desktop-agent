@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Upscayl
+Exec=upscayl
+GenericName=AI Image Upscaler
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=upscayl;

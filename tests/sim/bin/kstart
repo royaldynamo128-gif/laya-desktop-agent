@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Fake kstart for hermetic simulation: translates KDE kstart calls to fake gtk-launch
+app=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --application)
+            app="$2"
+            shift 2
+            ;;
+        *)
+            if [[ -z "$app" && "$1" != -* ]]; then
+                app="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [[ -n "$app" ]]; then
+    exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/gtk-launch" "$app"
+fi

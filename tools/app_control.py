@@ -92,19 +92,25 @@ class OpenApplicationTool(Tool):
         wm_class: Optional[str] = None,
         exec_cmd: Optional[str] = None,
         candidate_wm_classes: Optional[List[str]] = None,
-        **kwargs
+        folder: Optional[str] = None,
+        launch_preference: str = "standard",
+        last_referenced: Optional[str] = None,
+        **kwargs,
     ) -> ToolResult:
         target_name = (name or app_name or "").strip()
         if not target_name:
             return ToolResult(success=False, message="Application or folder name required.", error="Missing name parameter")
 
-        # 1. Check if target is a known directory/folder
-        target_folder = self._detect_folder(target_name)
-        if target_folder:
-            if not target_folder.exists():
-                target_folder.mkdir(parents=True, exist_ok=True)
-            opener = shutil.which("dolphin") or shutil.which("xdg-open")
+        # Emergency stop check (also enforced by executor, but checked here for the poll loop)
+        estop = kwargs.get("_emergency_stop")
+
+        # 1. Folder opening (explicit folder argument wins)
+        target_folder = self._detect_folder(folder or target_name)
+        if target_folder and launch_preference != "direct":
+            opener = shutil.which("xdg-open") or os.environ.get("XDG_OPEN_BIN")
             if opener:
+                if not target_folder.exists():
+                    target_folder.mkdir(parents=True, exist_ok=True)
                 try:
                     subprocess.Popen(
                         [opener, str(target_folder)],
@@ -121,6 +127,22 @@ class OpenApplicationTool(Tool):
                 except Exception as e:
                     logger.error("Failed to open folder %s: %s", target_folder, e)
                     return ToolResult(success=False, message=f"Failed to open folder: {e}", error=str(e))
+            # Fall through to application-style opening via file manager
+            file_manager = shutil.which("dolphin")
+            if file_manager:
+                try:
+                    subprocess.Popen(
+                        [file_manager, str(target_folder)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                    )
+                    return ToolResult(
+                        success=True,
+                        message=f"Opened folder '{target_folder.name}'.",
+                        data={"path": str(target_folder), "is_folder": True},
+                        observation_required=True,
+                    )
+                except Exception as e:
+                    return ToolResult(success=False, message=f"Failed to open folder: {e}", error=str(e))
 
         # 2. Application Resolution
         target_desktop_id = desktop_id
@@ -131,6 +153,7 @@ class OpenApplicationTool(Tool):
         desktop_file_path = None
         executable = None
 
+        # Catalog resolution fills any missing metadata
         resolved = self.catalog.resolve(target_name)
         if resolved:
             canonical_name = resolved.name
@@ -188,10 +211,11 @@ class OpenApplicationTool(Tool):
         launched = False
         launch_error = None
         launch_mechanism = ""
+        direct = launch_preference == "direct"
 
-        # Tier 1: KDE / Desktop Standard Launchers
+        # Tier 1: KDE / Desktop Standard Launchers (skipped in 'direct' mode)
         # 1a. kstart (native KDE Plasma 6)
-        if not launched and target_desktop_id and shutil.which("kstart"):
+        if not launched and not direct and target_desktop_id and shutil.which("kstart"):
             try:
                 app_stem = target_desktop_id[:-8] if target_desktop_id.endswith(".desktop") else target_desktop_id
                 cmd = ["kstart", "--application", app_stem]
@@ -204,7 +228,7 @@ class OpenApplicationTool(Tool):
                 launch_error = str(e)
 
         # 1b. gtk-launch
-        if not launched and target_desktop_id and shutil.which("gtk-launch"):
+        if not launched and not direct and target_desktop_id and shutil.which("gtk-launch"):
             try:
                 cmd = ["gtk-launch", target_desktop_id]
                 logger.info("Launching %s via gtk-launch: %s", canonical_name, cmd)
@@ -216,7 +240,7 @@ class OpenApplicationTool(Tool):
                 launch_error = str(e)
 
         # 1c. gio launch
-        if not launched and desktop_file_path and shutil.which("gio"):
+        if not launched and not direct and desktop_file_path and shutil.which("gio"):
             try:
                 cmd = ["gio", "launch", desktop_file_path]
                 logger.info("Launching %s via gio: %s", canonical_name, cmd)
@@ -276,22 +300,22 @@ class OpenApplicationTool(Tool):
                 observation_required=False,
             )
 
-        # 5. Bring newly launched window to focus and verify window detection (Requirement 8)
+        # 5. Adaptive window detection wait (fast first check, then back off)
+        # Emergency-stop aware: exits immediately if stop is triggered.
         new_window_id = None
-        for _ in range(28):
-            time.sleep(0.25)
-            # 1. Check for newly spawned windows
-            current_windows = self.kdotool.search("", limit=50)
-            diff_windows = [w for w in current_windows if w not in pre_existing_windows]
-            for w in diff_windows:
-                cls_name = self.kdotool.get_window_class(w).lower()
-                if cls_name and cls_name != "plasmashell":
-                    new_window_id = w
-                    break
-            if new_window_id:
-                break
+        wait_deadline = time.time() + 6.0
+        poll_delays = [0.12, 0.2, 0.3, 0.3, 0.4, 0.5]  # fast-first, back-off after
+        poll_idx = 0
 
-            # 2. Search by candidate classes and names
+        while time.time() < wait_deadline:
+            # Emergency stop check
+            if estop is not None and hasattr(estop, "is_stopped") and estop.is_stopped():
+                return ToolResult(
+                    success=False, message="Launch aborted by emergency stop.",
+                    error="EmergencyStop", observation_required=False,
+                )
+
+            # 1. Prefer windows that match our candidate classes (never random popups)
             for cand in candidate_classes:
                 if not cand or not cand.strip():
                     continue
@@ -305,6 +329,20 @@ class OpenApplicationTool(Tool):
                     break
             if new_window_id:
                 break
+
+            # 2. Any genuinely new window (fallback for apps whose class differs)
+            current_windows = self.kdotool.search("", limit=50)
+            diff_windows = [w for w in current_windows if w not in pre_existing_windows]
+            for w in diff_windows:
+                cls_name = self.kdotool.get_window_class(w).lower()
+                if cls_name and cls_name != "plasmashell":
+                    new_window_id = w
+                    break
+            if new_window_id:
+                break
+
+            time.sleep(poll_delays[min(poll_idx, len(poll_delays) - 1)])
+            poll_idx += 1
 
         if not new_window_id:
             logger.warning("Window for %s was not detected within timeout.", canonical_name)
@@ -350,7 +388,8 @@ class CloseApplicationTool(Tool):
         name: Optional[str] = None,
         wm_class: Optional[str] = None,
         window_id: Optional[str] = None,
-        **kwargs
+        fallback_key: Optional[str] = None,
+        **kwargs,
     ) -> ToolResult:
         target_win = window_id
         if not target_win:

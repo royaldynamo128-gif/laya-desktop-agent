@@ -17,12 +17,23 @@ import shutil
 
 logger = logging.getLogger(__name__)
 
-DESKTOP_DIRS = [
-    Path("/usr/share/applications"),
-    Path("/var/lib/flatpak/exports/share/applications"),
-    Path.home() / ".local/share/applications",
-    Path.home() / ".local/share/flatpak/exports/share/applications",
-]
+
+def _desktop_dirs() -> list:
+    """Desktop-entry search directories. Supports the LAYA_DESKTOP_DIRS env
+    override (colon-separated) for hermetic testing and custom app roots."""
+    env_override = os.environ.get("LAYA_DESKTOP_DIRS", "")
+    if env_override:
+        return [Path(p) for p in env_override.split(":") if p.strip()]
+    return [
+        Path.home() / ".local/share/applications",          # user overrides first
+        Path.home() / ".local/share/flatpak/exports/share/applications",
+        Path("/usr/share/applications"),
+        Path("/var/lib/flatpak/exports/share/applications"),
+        Path("/var/lib/snapd/desktop/applications"),
+    ]
+
+
+DESKTOP_DIRS = _desktop_dirs()
 
 # Generic descriptors that users append to application names in natural speech
 GENERIC_DESCRIPTORS = [
@@ -178,13 +189,28 @@ class ResolvedApp:
 
 
 class AppCatalog:
-    def __init__(self, cache_file: Optional[Path] = None):
+    def __init__(self, cache_file: Optional[Path] = None, desktop_dirs: Optional[list] = None):
         self.cache_file = cache_file
+        self.desktop_dirs = desktop_dirs if desktop_dirs is not None else DESKTOP_DIRS
         self.apps: Dict[str, AppEntry] = {}  # desktop_id -> AppEntry
         self.name_to_id: Dict[str, str] = {}  # normalized name -> desktop_id
         self.exec_to_id: Dict[str, str] = {}  # binary name -> desktop_id
         self.phonetic_to_ids: Dict[str, List[str]] = {}  # soundex -> [desktop_ids]
+        self.token_to_ids: Dict[str, List[str]] = {}  # name token -> [desktop_ids]
         self._load_or_index()
+
+    def _index_entry(self, entry: AppEntry) -> None:
+        """Register an entry in all lookup indexes."""
+        self.apps[entry.desktop_id] = entry
+        self.name_to_id[entry.name.lower()] = entry.desktop_id
+        if entry.executable:
+            self.exec_to_id.setdefault(entry.executable.lower(), entry.desktop_id)
+        if entry.phonetic_code:
+            self.phonetic_to_ids.setdefault(entry.phonetic_code, []).append(entry.desktop_id)
+        # Token index (all name words + full name) for single-word matching
+        for tok in entry.tokens:
+            if len(tok) > 2:
+                self.token_to_ids.setdefault(tok, []).append(entry.desktop_id)
 
     def _load_or_index(self) -> None:
         if self.cache_file and self.cache_file.exists():
@@ -193,14 +219,10 @@ class AppCatalog:
                     data = json.load(f)
                     for item in data.get("apps", []):
                         item.setdefault("candidate_wm_classes", [item.get("wm_class", "")] if item.get("wm_class") else [])
+                        item.pop("tokens", None)  # tokens are derived, not serialized
                         entry = AppEntry(**item)
                         entry.tokens = set(entry.name.lower().split())
-                        self.apps[entry.desktop_id] = entry
-                        self.name_to_id[entry.name.lower()] = entry.desktop_id
-                        if entry.executable:
-                            self.exec_to_id[entry.executable.lower()] = entry.desktop_id
-                        if entry.phonetic_code:
-                            self.phonetic_to_ids.setdefault(entry.phonetic_code, []).append(entry.desktop_id)
+                        self._index_entry(entry)
                     if self.apps:
                         return
             except Exception as e:
@@ -214,8 +236,9 @@ class AppCatalog:
         self.name_to_id.clear()
         self.exec_to_id.clear()
         self.phonetic_to_ids.clear()
+        self.token_to_ids.clear()
 
-        for d in DESKTOP_DIRS:
+        for d in self.desktop_dirs:
             if not d.exists():
                 continue
             for entry_path in d.glob("*.desktop"):
@@ -308,12 +331,7 @@ class AppCatalog:
                         tokens=tokens,
                     )
 
-                    self.apps[desktop_id] = app_entry
-                    self.name_to_id[name.lower()] = desktop_id
-                    if executable:
-                        self.exec_to_id[executable.lower()] = desktop_id
-                    if p_code:
-                        self.phonetic_to_ids.setdefault(p_code, []).append(desktop_id)
+                    self._index_entry(app_entry)
 
                 except Exception as e:
                     logger.debug("Error parsing %s: %s", entry_path, e)
@@ -400,38 +418,63 @@ class AppCatalog:
             if target_id in self.apps:
                 return self._build_resolved(self.apps[target_id], confidence=0.95, match_tier="strict_alias")
 
+        def _find_by_stems(stems: List[str], keywords: List[str]) -> Optional[AppEntry]:
+            """Find an app whose desktop stem/exec/token matches any candidate."""
+            for stem in stems:
+                for app in self.apps.values():
+                    app_stem = Path(app.desktop_id).stem.lower()
+                    if stem == app_stem or stem == app.executable.lower():
+                        return app
+            # Keyword scan over names/generic names (case-insensitive)
+            for kw in keywords:
+                for app in self.apps.values():
+                    corpus = f"{app.name} {app.generic_name}".lower()
+                    if kw in corpus:
+                        return app
+            return None
+
         # System Settings
         if clean in ["settings", "system settings", "kde settings", "plasma settings", "control panel", "preferences"]:
-            for sid in ["systemsettings.desktop", "org.kde.systemsettings.desktop", "gnome-control-center.desktop"]:
-                if sid in self.apps:
-                    return self._build_resolved(self.apps[sid], confidence=0.98, match_tier="system_settings")
+            app = _find_by_stems(["systemsettings", "org.kde.systemsettings", "gnome-control-center"], ["system settings", "control center"])
+            if app:
+                return self._build_resolved(app, confidence=0.98, match_tier="system_settings")
 
         # Text Editor / Notepad
         if clean in ["notepad", "text editor", "a text editor", "editor", "code editor"]:
-            for ed_id in ["org.kde.kwrite.desktop", "org.kde.kate.desktop", "org.gnome.TextEditor.desktop", "gedit.desktop"]:
-                if ed_id in self.apps:
-                    return self._build_resolved(self.apps[ed_id], confidence=0.95, match_tier="default_editor")
+            app = _find_by_stems(
+                ["kwrite", "org.kde.kwrite", "kate", "org.kde.kate", "org.gnome.texteditor", "gedit"],
+                ["text editor"],
+            )
+            if app:
+                return self._build_resolved(app, confidence=0.95, match_tier="default_editor")
 
         # Handle standalone generic requests (e.g. "browser", "default browser", "terminal", "file manager")
         if clean in ["browser", "web browser", "default browser", "my browser", "internet"]:
-            # Query default browser via xdg-settings
             default_browser_id = self._get_default_browser_desktop_id()
             if default_browser_id and default_browser_id in self.apps:
                 return self._build_resolved(self.apps[default_browser_id], confidence=0.92, match_tier="system_default")
-            for b_id in ["com.google.Chrome.desktop", "google-chrome.desktop", "opera.desktop", "firefox.desktop"]:
-                if b_id in self.apps:
-                    return self._build_resolved(self.apps[b_id], confidence=0.92, match_tier="default_browser")
+            app = _find_by_stems(
+                ["google-chrome", "com.google.chrome", "opera", "firefox", "org.mozilla.firefox", "brave-browser", "chromium"],
+                ["web browser"],
+            )
+            if app:
+                return self._build_resolved(app, confidence=0.92, match_tier="default_browser")
 
         if clean in ["terminal", "my terminal", "console"]:
-            # Prefer Ghostty if installed, then Konsole, then kitty
-            for term_id in ["com.mitchellh.ghostty.desktop", "org.kde.konsole.desktop", "kitty.desktop", "alacritty.desktop"]:
-                if term_id in self.apps:
-                    return self._build_resolved(self.apps[term_id], confidence=0.92, match_tier="default_terminal")
+            app = _find_by_stems(
+                ["ghostty", "com.mitchellh.ghostty", "konsole", "org.kde.konsole", "kitty", "alacritty", "foot", "kgx", "org.gnome.console"],
+                ["terminal"],
+            )
+            if app:
+                return self._build_resolved(app, confidence=0.92, match_tier="default_terminal")
 
         if clean in ["files", "file manager", "my files", "explorer", "file browser"]:
-            for fm_id in ["org.kde.dolphin.desktop", "org.gnome.Nautilus.desktop", "thunar.desktop"]:
-                if fm_id in self.apps:
-                    return self._build_resolved(self.apps[fm_id], confidence=0.92, match_tier="default_files")
+            app = _find_by_stems(
+                ["org.kde.dolphin", "dolphin", "org.gnome.nautilus", "nautilus", "thunar", "pcmanfm"],
+                ["file manager", "files"],
+            )
+            if app:
+                return self._build_resolved(app, confidence=0.92, match_tier="default_files")
 
         # --- Tier 4: Phonetic / Soundex Similarity ---
         # e.g. "upscale" / "upscale app" -> Soundex U124 matches Upscayl (U124)
@@ -514,6 +557,23 @@ class AppCatalog:
                     chosen = kde_apps[0] if kde_apps else gui_apps[0]
                     return self._build_resolved(chosen, confidence=0.85, match_tier="generic_name_gui")
                 return self._build_resolved(exact_cat[0], confidence=0.82, match_tier="generic_name_fallback")
+
+        # --- Tier 3.5: Token-level fuzzy match ("crome" → "chrome" token of
+        # "Google Chrome") — repairs single-word STT slips against any
+        # installed application, no hardcoded list needed. ---
+        if " " not in clean:
+            best_token: Optional[Tuple[float, str]] = None
+            for tok, ids in self.token_to_ids.items():
+                ratio = difflib.SequenceMatcher(None, clean, tok).ratio()
+                if ratio >= 0.80:
+                    if best_token is None or ratio > best_token[0]:
+                        best_token = (ratio, ids[0])
+            if best_token and best_token[0] >= 0.82:
+                entry = self.apps[best_token[1]]
+                # Confirm with full-name ratio to avoid nonsense matches
+                full_ratio = difflib.SequenceMatcher(None, clean, entry.name.lower()).ratio()
+                if full_ratio >= 0.45 or best_token[0] >= 0.90:
+                    return self._build_resolved(entry, confidence=round(0.75 + best_token[0] * 0.15, 3), match_tier="token_fuzzy")
 
         # --- Tier 6: Fuzzy String Matching (Levenshtein Ratio) ---
         candidates = []

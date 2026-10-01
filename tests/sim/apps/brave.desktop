@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Brave
+Exec=brave
+GenericName=Web Browser
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=brave;

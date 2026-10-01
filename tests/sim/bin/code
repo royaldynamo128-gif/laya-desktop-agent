@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+import os, sys
+fakeapp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fakeapp")
+os.execv(sys.executable, [sys.executable, fakeapp, "code", "Visual Studio Code"])

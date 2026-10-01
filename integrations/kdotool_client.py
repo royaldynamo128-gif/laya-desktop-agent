@@ -5,6 +5,7 @@ Wraps /usr/local/bin/kdotool for window search, activation, minimization, closin
 
 from typing import List, Optional, Dict
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -14,7 +15,13 @@ logger = logging.getLogger(__name__)
 
 class KdotoolClient:
     def __init__(self, binary_path: Optional[str] = None):
-        self.binary_path = binary_path or shutil.which("kdotool") or "/usr/local/bin/kdotool"
+        # Resolution order: explicit arg > $KDTOOL_BIN env > PATH > /usr/local/bin/kdotool
+        self.binary_path = (
+            binary_path
+            or os.environ.get("KDTOOL_BIN")
+            or shutil.which("kdotool")
+            or "/usr/local/bin/kdotool"
+        )
 
     def _run(self, *args) -> subprocess.CompletedProcess:
         cmd = [self.binary_path] + list(args)

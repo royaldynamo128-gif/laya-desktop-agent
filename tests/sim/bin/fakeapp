@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""
+Fake application binary — simulates a launched desktop application.
+
+Registers a window in the fake-kdotool window state after a configurable
+launch delay ($FAKEAPP_LAUNCH_DELAY_MS, default 250ms), then stays alive
+until killed. Supports scripted behaviors via $FAKEAPP_SCRIPT (a JSON file
+describing UI text to expose for AT-SPI simulation and actions log).
+
+Usage: fakeapp <wm_class> <window_title> [extra...]
+"""
+import json
+import os
+import signal
+import sys
+import time
+import uuid
+
+
+def main() -> int:
+    wm_class = sys.argv[1] if len(sys.argv) > 1 else "FakeApp"
+    title = sys.argv[2] if len(sys.argv) > 2 else wm_class
+
+    state_path = os.environ.get("KDOTOOL_STATE", "/tmp/kdotool_test_state.json")
+    delay_ms = int(os.environ.get("FAKEAPP_LAUNCH_DELAY_MS", "250"))
+    ui_log = os.environ.get("FAKEAPP_UI_LOG", "")
+
+    # Simulate slow application startup
+    if delay_ms > 0:
+        time.sleep(delay_ms / 1000.0)
+
+    wid = "{" + str(uuid.uuid4()) + "}"
+
+    # Retry loop for state file availability
+    for _ in range(20):
+        try:
+            with open(state_path, "r") as f:
+                state = json.load(f)
+            break
+        except Exception:
+            try:
+                state = {"windows": {}, "active": None, "desktop": 1, "log": []}
+                with open(state_path, "w") as f:
+                    json.dump(state, f)
+                break
+            except Exception:
+                time.sleep(0.05)
+
+    state.setdefault("windows", {})[wid] = {
+        "name": title,
+        "class": wm_class,
+        "desktop": state.get("desktop", 1),
+        "states": [],
+        "pid": os.getpid(),
+    }
+    state["active"] = wid
+
+    tmp = state_path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(state, f)
+    os.replace(tmp, state_path)
+
+    if ui_log:
+        with open(ui_log, "a") as f:
+            f.write(json.dumps({"event": "launched", "class": wm_class, "title": title, "pid": os.getpid()}) + "\n")
+
+    # Keep the "application" alive until terminated
+    def _on_term(signum, frame):
+        try:
+            with open(state_path, "r") as f:
+                state = json.load(f)
+            state["windows"].pop(wid, None)
+            if state.get("active") == wid:
+                state["active"] = None
+            tmp = state_path + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(state, f)
+            os.replace(tmp, state_path)
+        except Exception:
+            pass
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, _on_term)
+    signal.signal(signal.SIGINT, _on_term)
+
+    while True:
+        time.sleep(1.0)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

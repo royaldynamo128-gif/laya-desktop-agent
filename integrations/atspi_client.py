@@ -200,3 +200,239 @@ class AtspiClient:
         texts = self.get_active_app_text(max_elements=10)
         return " | ".join(texts) if texts else ""
 
+    # ------------------------------------------------------------------
+    # Element discovery for UI automation (click / select / activate)
+    # ------------------------------------------------------------------
+
+    CLICKABLE_ROLES = (
+        "push button", "button", "toggle button", "check box", "checkbox",
+        "radio button", "menu item", "list item", "tree item", "tab",
+        "page tab", "link", "label", "option", "combo box", "menu",
+    )
+
+    def find_elements_by_label(self, label: str, max_results: int = 8) -> List[Dict[str, Any]]:
+        """
+        Find UI elements matching `label` in the ACTIVE window.
+        Returns list of dicts sorted by match confidence:
+          {name, role, x, y, width, height, accessible, confidence}
+        Exact matches rank above fuzzy ones; interactive roles rank above
+        passive text.
+        """
+        if not self.enabled or not label:
+            return []
+
+        import difflib
+        import re as _re
+
+        target = label.strip().lower()
+        results: List[Dict[str, Any]] = []
+
+        try:
+            desktop = self.get_desktop()
+            if not desktop:
+                return []
+
+            for win in self._active_windows(desktop):
+                self._collect_matching_elements(win, target, results, max_results * 3)
+
+        except Exception as e:
+            logger.debug("find_elements_by_label failed: %s", e)
+
+        # Rank: interactive role > exact match > fuzzy ratio
+        def _rank(r: Dict[str, Any]) -> float:
+            score = r["confidence"]
+            if r.get("role", "") in self.CLICKABLE_ROLES:
+                score += 0.15
+            return score
+
+        results.sort(key=_rank, reverse=True)
+        return results[:max_results]
+
+    def find_elements_by_role(self, role: str, max_results: int = 20) -> List[Dict[str, Any]]:
+        """
+        Find UI elements by accessibility ROLE in the ACTIVE window
+        (e.g. role="link" for search-result links). Returned in tree order;
+        callers sort by screen position as needed.
+        """
+        if not self.enabled or not role:
+            return []
+        results: List[Dict[str, Any]] = []
+        try:
+            desktop = self.get_desktop()
+            if not desktop:
+                return []
+            for win in self._active_windows(desktop):
+                self._collect_role_elements(win, role.lower(), results, max_results)
+        except Exception as e:
+            logger.debug("find_elements_by_role failed: %s", e)
+        return results[:max_results]
+
+    def _active_windows(self, desktop: Any) -> List[Any]:
+        """Windows of the active/foreground application (fallback: first)."""
+        active_windows: List[Any] = []
+        for i in range(desktop.get_child_count()):
+            app = desktop.get_child_at_index(i)
+            if not app:
+                continue
+            for j in range(app.get_child_count()):
+                win = app.get_child_at_index(j)
+                if not win:
+                    continue
+                try:
+                    state = win.get_state_set()
+                    if state.contains(Atspi.StateType.ACTIVE) or state.contains(Atspi.StateType.FOCUSED):
+                        active_windows.append(win)
+                except Exception:
+                    continue
+        if not active_windows:
+            # Fall back to first app's first window
+            for i in range(desktop.get_child_count()):
+                app = desktop.get_child_at_index(i)
+                if app and app.get_child_count() > 0:
+                    active_windows.append(app.get_child_at_index(0))
+                    break
+        return active_windows
+
+    def _collect_role_elements(
+        self, accessible: Any, role: str, results: List[Dict[str, Any]], limit: int, depth: int = 0,
+    ) -> None:
+        if len(results) >= limit or accessible is None or depth > 25:
+            return
+        try:
+            node_role = (accessible.get_role_name() or "").lower()
+            if node_role == role:
+                name = (accessible.get_name() or "").strip()
+                x = y = w = h = 0
+                try:
+                    ext = accessible.get_extents()
+                    if ext:
+                        x, y, w, h = ext.x, ext.y, ext.width, ext.height
+                except Exception:
+                    pass
+                results.append({
+                    "name": name, "role": node_role,
+                    "x": x, "y": y, "width": w, "height": h,
+                    "accessible": accessible,
+                    "confidence": 1.0,
+                })
+            for i in range(accessible.get_child_count()):
+                if len(results) >= limit:
+                    return
+                child = accessible.get_child_at_index(i)
+                if child:
+                    self._collect_role_elements(child, role, results, limit, depth + 1)
+        except Exception:
+            pass
+
+    def _collect_matching_elements(
+        self, accessible: Any, target: str, results: List[Dict[str, Any]], limit: int, depth: int = 0,
+    ) -> None:
+        if len(results) >= limit or accessible is None or depth > 25:
+            return
+        try:
+            name = (accessible.get_name() or "").strip()
+            role = accessible.get_role_name() or ""
+
+            if name:
+                v = name.lower()
+                exact = v == target
+                substr = target in v or v in target
+                ratio = difflib.SequenceMatcher(None, target, v).ratio()
+                # Token subset match: "5x" in "5X Upscale option"
+                t_tokens = set(_re.findall(r"\w+", target))
+                v_tokens = set(_re.findall(r"\w+", v))
+                subset = bool(t_tokens) and t_tokens.issubset(v_tokens)
+
+                if exact or substr or ratio >= 0.82 or subset:
+                    conf = 1.0 if exact else (0.9 if subset or substr else ratio)
+                    # Element extents via Component interface
+                    x = y = w = h = 0
+                    try:
+                        ext = accessible.get_extents()
+                        if ext:
+                            x, y, w, h = ext.x, ext.y, ext.width, ext.height
+                    except Exception:
+                        pass
+                    results.append({
+                        "name": name, "role": role,
+                        "x": x, "y": y, "width": w, "height": h,
+                        "accessible": accessible,
+                        "confidence": round(conf, 3),
+                    })
+
+            for i in range(accessible.get_child_count()):
+                if len(results) >= limit:
+                    return
+                child = accessible.get_child_at_index(i)
+                if child:
+                    self._collect_matching_elements(child, target, results, limit, depth + 1)
+        except Exception:
+            pass
+
+    def get_editable_fields(self, max_fields: int = 10) -> List[Dict[str, Any]]:
+        """Find text-entry fields in the active window (for form filling)."""
+        if not self.enabled:
+            return []
+        fields: List[Dict[str, Any]] = []
+        try:
+            desktop = self.get_desktop()
+            if not desktop:
+                return []
+            win = None
+            for i in range(desktop.get_child_count()):
+                app = desktop.get_child_at_index(i)
+                if not app:
+                    continue
+                for j in range(app.get_child_count()):
+                    w = app.get_child_at_index(j)
+                    if not w:
+                        continue
+                    try:
+                        state = w.get_state_set()
+                        if state.contains(Atspi.StateType.ACTIVE) or state.contains(Atspi.StateType.FOCUSED):
+                            win = w
+                            break
+                    except Exception:
+                        continue
+                if win:
+                    break
+            if win:
+                self._collect_editable(win, fields, max_fields)
+        except Exception as e:
+            logger.debug("get_editable_fields failed: %s", e)
+        return fields
+
+    def _collect_editable(self, accessible: Any, fields: List[Dict[str, Any]], limit: int, depth: int = 0) -> None:
+        if len(fields) >= limit or accessible is None or depth > 25:
+            return
+        try:
+            role = accessible.get_role_name() or ""
+            name = (accessible.get_name() or "").strip()
+            if role in ("text", "entry", "password text", "search", "text box", "document text", "edit bar"):
+                try:
+                    state = accessible.get_state_set()
+                    editable = state.contains(Atspi.StateType.EDITABLE)
+                except Exception:
+                    editable = True
+                if editable:
+                    x = y = w2 = h2 = 0
+                    try:
+                        ext = accessible.get_extents()
+                        if ext:
+                            x, y, w2, h2 = ext.x, ext.y, ext.width, ext.height
+                    except Exception:
+                        pass
+                    fields.append({
+                        "name": name, "role": role,
+                        "x": x, "y": y, "width": w2, "height": h2,
+                        "accessible": accessible,
+                    })
+            for i in range(accessible.get_child_count()):
+                if len(fields) >= limit:
+                    return
+                child = accessible.get_child_at_index(i)
+                if child:
+                    self._collect_editable(child, fields, limit, depth + 1)
+        except Exception:
+            pass
+

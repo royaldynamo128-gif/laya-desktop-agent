@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Konsole
+Exec=konsole
+GenericName=Terminal Emulator
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=konsole;

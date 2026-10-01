@@ -16,6 +16,7 @@ class STTConfig(BaseModel):
     compute_type: Literal["float16", "int8_float16", "int8", "float32"] = Field(default="float16")
     idle_timeout_sec: int = Field(default=300, description="Seconds of inactivity before model is offloaded")
     language: str = Field(default="en")
+    beam_size: int = Field(default=1, description="Beam size for decoding (1 = fast path for short commands)")
 
 
 class LayaConfig(BaseModel):
@@ -98,6 +99,11 @@ class GoalConfig(BaseModel):
     verify_after_every_step: bool = Field(default=True)
 
 
+class BrowserConfig(BaseModel):
+    cdp_port: int = Field(default=9222, description="Chrome/Chromium remote debugging port for Playwright attach")
+    playwright_mode: Literal["auto", "xdg-open"] = Field(default="auto", description="Browser automation tier")
+
+
 class AgentConfig(BaseModel):
     profile: Literal["low_resource", "balanced", "performance"] = Field(default="balanced")
     stt: STTConfig = Field(default_factory=STTConfig)
@@ -111,6 +117,7 @@ class AgentConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     planner: PlannerConfig = Field(default_factory=PlannerConfig)
     goal: GoalConfig = Field(default_factory=GoalConfig)
+    browser: BrowserConfig = Field(default_factory=BrowserConfig)
 
 
     # Path properties

@@ -38,10 +38,23 @@ from integrations.playwright_client import BrowserClient
 from tools.registry import ToolRegistry
 from tools.app_control import OpenApplicationTool, CloseApplicationTool, SwitchWindowTool
 from tools.window_control import MinimizeWindowTool, MaximizeWindowTool, SwitchDesktopTool
-from tools.browser_control import BrowserSearchTool, BrowserNavigateTool
+from tools.browser_control import (
+    BrowserSearchTool, BrowserNavigateTool, BrowserDownloadTool,
+    BrowserClickTool, BrowserFillTool,
+)
 from tools.input_control import ScrollTool, TypeTextTool, PressKeyTool
 from tools.screen_control import ReadScreenTool, TakeScreenshotTool
 from tools.system_control import SetVolumeTool, MuteVolumeTool, MediaControlTool
+from tools.file_control import (
+    FileOpenTool, FileMoveTool, FileCopyTool, FileRenameTool, FileDeleteTool,
+    FolderCreateTool, FileCompressTool, FileExtractTool, FileFindTool,
+)
+from tools.click_control import (
+    ClickElementTool, SelectOptionTool, SubmitTool, FillFormTool,
+    UIInteractTool, WaitStateTool, VerifyStateTool,
+)
+from tools.save_control import SaveAsTool
+from vision.screen_analyzer import ScreenAnalyzer
 from execution.parameter_binder import ParameterBinder
 from execution.executor import ActionExecutor
 from safety.policy import SafetyPolicy
@@ -49,6 +62,7 @@ from safety.emergency_stop import EmergencyStop
 from verification.observer import DesktopObserver
 from verification.verifier import ActionVerifier
 from verification.recovery import RecoveryManager
+from verification.goal_verifier import GoalVerifier
 from app.ptt_listener import PTTListener
 
 logger = logging.getLogger("laya_agent")
@@ -97,7 +111,12 @@ class LayaDaemon:
         self.launcher = AppLauncher(cache_file=config.data_dir / "app_registry.json")
         self.atspi = AtspiClient()
         self.dbus = DBusClient()
-        self.browser = BrowserClient()
+        browser_cfg = getattr(config, "browser", None)
+        self.browser = BrowserClient(
+            cdp_port=getattr(browser_cfg, "cdp_port", 9222),
+            playwright_mode=getattr(browser_cfg, "playwright_mode", "auto"),
+        )
+        self.screen_analyzer = ScreenAnalyzer(atspi=self.atspi)
 
         # 4. Tools Registry
         self.registry = ToolRegistry()
@@ -109,6 +128,7 @@ class LayaDaemon:
         self.observer = DesktopObserver(self.kdotool, self.atspi)
         self.verifier = ActionVerifier(kdotool=self.kdotool)
         self.recovery_mgr = RecoveryManager(max_retries=config.safety.max_retries)
+        self.goal_verifier = GoalVerifier()
 
         # 6. Pipeline Coordinator
         self.coordinator = PipelineCoordinator(
@@ -128,6 +148,7 @@ class LayaDaemon:
             status_broadcaster=self.status_broadcaster,
             diagnostic_mode=diagnostic_mode,
             lifecycle_mgr=self.lifecycle_mgr,
+            goal_verifier=self.goal_verifier,
         )
 
         # 7. Global Key Listener
@@ -148,13 +169,52 @@ class LayaDaemon:
         self.registry.register(MinimizeWindowTool(self.kdotool))
         self.registry.register(MaximizeWindowTool(self.kdotool))
         self.registry.register(SwitchDesktopTool(self.kdotool))
+
+        # Browser automation (Playwright CDP + xdg-open fallback)
         self.registry.register(BrowserSearchTool(self.browser))
         self.registry.register(BrowserNavigateTool(self.browser))
+        self.registry.register(BrowserDownloadTool(self.browser))
+        self.registry.register(BrowserClickTool(self.browser))
+        self.registry.register(BrowserFillTool(self.browser))
+
+        # Input synthesis (AT-SPI + wtype + clipboard)
         self.registry.register(ScrollTool())
         self.registry.register(TypeTextTool())
         self.registry.register(PressKeyTool())
+
+        # Screen & perception
         self.registry.register(ReadScreenTool(self.atspi, self.kdotool))
         self.registry.register(TakeScreenshotTool(self.config.screenshot_cache_dir))
+
+        # UI interaction (AT-SPI element discovery + OCR fallback)
+        self.registry.register(ClickElementTool(self.screen_analyzer, keyboard_tool=PressKeyTool(), browser_client=self.browser))
+        self.registry.register(SelectOptionTool(self.screen_analyzer))
+        self.registry.register(SubmitTool(self.screen_analyzer, press_key_tool=PressKeyTool()))
+        self.registry.register(FillFormTool(self.screen_analyzer, type_tool=TypeTextTool(), press_key_tool=PressKeyTool()))
+        self.registry.register(UIInteractTool(self.screen_analyzer))
+        self.registry.register(WaitStateTool(self.screen_analyzer))
+        self.registry.register(VerifyStateTool(self.screen_analyzer))
+
+        # Filesystem operations (native, reliable)
+        self.registry.register(FileOpenTool())
+        self.registry.register(FileMoveTool())
+        self.registry.register(FileCopyTool())
+        self.registry.register(FileRenameTool())
+        self.registry.register(FileDeleteTool())
+        self.registry.register(FolderCreateTool())
+        self.registry.register(FileCompressTool())
+        self.registry.register(FileExtractTool())
+        self.registry.register(FileFindTool())
+
+        # Save / convert (Pillow native + GUI dialog fallback)
+        self.type_tool = TypeTextTool()
+        self.press_tool = PressKeyTool()
+        self.registry.register(SaveAsTool(
+            type_fn=lambda t: self.type_tool.execute(text=t).success,
+            press_fn=lambda k: self.press_tool.execute(key=k).success,
+        ))
+
+        # System controls
         self.registry.register(SetVolumeTool())
         self.registry.register(MuteVolumeTool())
         self.registry.register(MediaControlTool(self.dbus))
@@ -181,9 +241,12 @@ class LayaDaemon:
             logger.warning("Ignoring shortcut: Agent is in Emergency Stop state.")
             return
 
-        # Concurrency safety: if previous command still actively processing, avoid corruption
+        # Concurrency safety: if previous command still actively processing,
+        # request its cancellation and reject the new actuation (no double-run)
         if self._is_processing:
-            logger.warning("Previous command still processing. Rejecting concurrent actuation.")
+            logger.warning("Previous command still processing. Requesting cancellation & rejecting concurrent actuation.")
+            if self._active_lifecycle:
+                self._active_lifecycle.request_cancel(reason="superseded by new command")
             return
 
         lifecycle = self.lifecycle_mgr.new_command()
@@ -274,8 +337,12 @@ class LayaDaemon:
         ).start()
 
     def _on_command_timeout(self, lifecycle: CommandLifecycle) -> None:
-        """Called automatically when a command exceeds its global watchdog timeout."""
+        """Called automatically when a command exceeds its global watchdog timeout.
+        NOTE: does NOT reset _is_processing — that flag is owned exclusively by
+        the processing thread (prevents double-execution races). Instead it
+        requests cooperative cancellation, which the loops honor."""
         logger.error("[%s] Global watchdog timeout! Stage: %s", lifecycle.command_id, lifecycle.current_stage.value)
+        lifecycle.request_cancel(reason="watchdog timeout")
         if self.audio_capture.is_capturing:
             self.audio_capture.stop(wait_postroll=False)
 
@@ -291,8 +358,7 @@ class LayaDaemon:
         if hasattr(self, "coordinator"):
             from monitoring.latency_tracker import CommandMetrics
             self.coordinator._speak_response("Command timed out.", CommandMetrics(command_id=lifecycle.command_id))
-        self._is_processing = False
-        self._active_lifecycle = None
+        # _active_lifecycle cleared by the owning processing thread in its finally block
 
     def _on_estop_press(self) -> None:
         """Called when user hits Emergency Stop key."""
@@ -308,18 +374,13 @@ class LayaDaemon:
         )
         self.dbus.show_notification("Laya Agent", "EMERGENCY STOP ACTIVATED", timeout_ms=4000)
 
-    def start(self) -> None:
-        """Start daemon and enter main loop."""
-        if not self._acquire_single_instance_lock():
-            sys.exit(1)
-
-        logger.info("Starting Laya Voice Agent Daemon (Diagnostic Mode: %s)...", self.diagnostic_mode)
-
-        # 0. Start Status IPC & Overlay
-        self.status_broadcaster.start()
+    def _spawn_overlay(self) -> None:
+        """Launch the GTK status-overlay subprocess (best effort)."""
+        overlay_preload = os.environ.get("LAYA_OVERLAY_LD_PRELOAD", "/usr/lib/libgtk4-layer-shell.so")
         try:
             overlay_env = os.environ.copy()
-            overlay_env["LD_PRELOAD"] = "/usr/lib/libgtk4-layer-shell.so"
+            if overlay_preload and Path(overlay_preload).exists():
+                overlay_env["LD_PRELOAD"] = overlay_preload
             self._overlay_proc = subprocess.Popen(
                 [sys.executable, "-m", "app.ui.status_overlay"],
                 env=overlay_env,
@@ -329,6 +390,17 @@ class LayaDaemon:
             logger.info("Spawned Live Status Overlay (PID: %d)", self._overlay_proc.pid)
         except Exception as e:
             logger.warning("Could not spawn status overlay: %s", e)
+
+    def start(self) -> None:
+        """Start daemon and enter main loop."""
+        if not self._acquire_single_instance_lock():
+            sys.exit(1)
+
+        logger.info("Starting Laya Voice Agent Daemon (Diagnostic Mode: %s)...", self.diagnostic_mode)
+
+        # 0. Start Status IPC & Overlay
+        self.status_broadcaster.start()
+        self._spawn_overlay()
 
         # Setup OS signal handlers
         try:
@@ -367,20 +439,17 @@ class LayaDaemon:
                 time.sleep(1.0)
                 # Periodic VRAM & health check
                 self.vram_guard.check_status()
+                # Periodic cache cleanup (was per-command: a disk scan on the
+                # critical path — now runs off-path every ~60s)
+                if int(time.time()) % 60 == 0:
+                    try:
+                        self.reaper.reap_all()
+                    except Exception as e:
+                        logger.debug("Cache reap failed: %s", e)
                 # Check status overlay health
                 if self._overlay_proc and self._overlay_proc.poll() is not None and self._running:
                     logger.warning("Status overlay terminated unexpectedly. Restarting...")
-                    try:
-                        overlay_env = os.environ.copy()
-                        overlay_env["LD_PRELOAD"] = "/usr/lib/libgtk4-layer-shell.so"
-                        self._overlay_proc = subprocess.Popen(
-                            [sys.executable, "-m", "app.ui.status_overlay"],
-                            env=overlay_env,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                        )
-                    except Exception as e:
-                        logger.error("Failed to restart status overlay: %s", e)
+                    self._spawn_overlay()
         except KeyboardInterrupt:
             pass
         finally:

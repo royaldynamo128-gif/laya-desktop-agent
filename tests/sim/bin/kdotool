@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""
+Fake kdotool — a deterministic simulated KWin window manager for hermetic tests.
+
+State file (JSON) at $KDOTOOL_STATE:
+{
+  "windows": {"{uuid}": {"name": str, "class": str, "desktop": int, "states": [str], "pid": int}},
+  "active": "{uuid}" | null,
+  "desktop": 1,
+  "log": ["cmd ...", ...]
+}
+
+Supported commands (mirrors the contract KdotoolClient expects):
+  getactivewindow
+  getwindowname <id>
+  getwindowclassname <id>
+  search [--limit N] <pattern>
+  get_desktop
+  set_desktop <n>
+  get_desktop_for_window <id>
+  windowactivate <id>
+  windowraise <id>
+  windowminimize <id>
+  windowstate --add|--remove <STATE> <id>
+  windowclose <id>
+  windowsize <id> <w> <h>
+"""
+import json
+import os
+import sys
+import time
+import uuid
+
+
+def state_path() -> str:
+    return os.environ.get("KDOTOOL_STATE", "/tmp/kdotool_test_state.json")
+
+
+def load() -> dict:
+    try:
+        with open(state_path(), "r") as f:
+            return json.load(f)
+    except Exception:
+        return {"windows": {}, "active": None, "desktop": 1, "log": []}
+
+
+def save(state: dict) -> None:
+    tmp = state_path() + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(state, f)
+    os.replace(tmp, state_path())
+
+
+def next_active(state: dict) -> str | None:
+    """Pick the next focusable window (not minimized, on current desktop)."""
+    for wid, w in state["windows"].items():
+        if "MINIMIZED" not in w.get("states", []) and w.get("desktop", 1) == state.get("desktop", 1):
+            return wid
+    for wid, w in state["windows"].items():
+        if "MINIMIZED" not in w.get("states", []):
+            return wid
+    return None
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args:
+        print("fake-kdotool: no command", file=sys.stderr)
+        return 1
+
+    # Failure injection for recovery testing:
+    # KDOTOOL_FAIL_CMDS="windowactivate,windowclose" makes those commands fail.
+    # KDOTOOL_FAIL_N="2" limits the failure to the first N calls (transient).
+    fail_cmds = os.environ.get("KDOTOOL_FAIL_CMDS", "")
+    if fail_cmds and args[0] in [c.strip() for c in fail_cmds.split(",") if c.strip()]:
+        counter_file = state_path() + ".failcount"
+        try:
+            count = int(open(counter_file).read() or "0")
+        except Exception:
+            count = 0
+        fail_n = os.environ.get("KDOTOOL_FAIL_N", "0")
+        if fail_n == "0" or count < int(fail_n):
+            with open(counter_file, "w") as f:
+                f.write(str(count + 1))
+            print(f"fake-kdotool: injected failure #{count+1} for {args[0]}", file=sys.stderr)
+            return 2
+
+    state = load()
+    cmd = args[0]
+    state.setdefault("log", []).append(" ".join(args))
+
+    if cmd == "getactivewindow":
+        print(state.get("active") or "")
+        save(state)
+        return 0
+
+    if cmd == "getwindowname":
+        wid = args[1] if len(args) > 1 else ""
+        w = state["windows"].get(wid)
+        print(w["name"] if w else "")
+        save(state)
+        return 0 if w else 1
+
+    if cmd == "getwindowclassname":
+        wid = args[1] if len(args) > 1 else ""
+        w = state["windows"].get(wid)
+        print(w["class"] if w else "")
+        save(state)
+        return 0 if w else 1
+
+    if cmd == "search":
+        limit = 5
+        rest = []
+        i = 1
+        while i < len(args):
+            if args[i] == "--limit":
+                limit = int(args[i + 1])
+                i += 2
+            else:
+                rest.append(args[i])
+                i += 1
+        pattern = " ".join(rest).strip().strip('"')
+        if pattern == "":
+            # Empty pattern: list all windows
+            matches = list(state["windows"].keys())[:limit]
+        else:
+            matches = []
+            for wid, w in state["windows"].items():
+                hay = (w.get("name", "") + "\n" + w.get("class", "")).lower()
+                if pattern.lower() in hay:
+                    matches.append(wid)
+                    if len(matches) >= limit:
+                        break
+        for m in matches:
+            print(m)
+        save(state)
+        return 0
+
+    if cmd == "get_desktop":
+        print(state.get("desktop", 1))
+        save(state)
+        return 0
+
+    if cmd == "set_desktop":
+        state["desktop"] = int(args[1])
+        if state.get("active") and state["active"] in state["windows"]:
+            w = state["windows"][state["active"]]
+            if w.get("desktop") != state["desktop"] or "MINIMIZED" in w.get("states", []):
+                state["active"] = next_active(state)
+        save(state)
+        return 0
+
+    if cmd == "get_desktop_for_window":
+        wid = args[1] if len(args) > 1 else ""
+        w = state["windows"].get(wid)
+        print(w.get("desktop", 1) if w else "")
+        save(state)
+        return 0 if w else 1
+
+    if cmd in ("windowactivate", "windowraise"):
+        wid = args[-1]
+        if wid not in state["windows"]:
+            save(state)
+            return 1
+        if cmd == "windowactivate":
+            w = state["windows"][wid]
+            if "MINIMIZED" in w.get("states", []):
+                w["states"] = [s for s in w.get("states", []) if s != "MINIMIZED"]
+            state["desktop"] = w.get("desktop", state.get("desktop", 1))
+            state["active"] = wid
+        save(state)
+        return 0
+
+    if cmd == "windowminimize":
+        wid = args[-1]
+        w = state["windows"].get(wid)
+        if not w:
+            save(state)
+            return 1
+        w.setdefault("states", [])
+        if "MINIMIZED" not in w["states"]:
+            w["states"].append("MINIMIZED")
+        if state.get("active") == wid:
+            state["active"] = next_active(state)
+        save(state)
+        return 0
+
+    if cmd == "windowstate":
+        # windowstate --add MAXIMIZED <id> / --remove MINIMIZED <id>
+        mode = args[1] if len(args) > 1 else "--add"
+        st = args[2] if len(args) > 2 else ""
+        wid = args[-1]
+        w = state["windows"].get(wid)
+        if not w:
+            save(state)
+            return 1
+        w.setdefault("states", [])
+        if mode == "--add" and st not in w["states"]:
+            w["states"].append(st)
+            if st == "MINIMIZED" and state.get("active") == wid:
+                state["active"] = next_active(state)
+        elif mode == "--remove":
+            w["states"] = [s for s in w["states"] if s != st]
+        save(state)
+        return 0
+
+    if cmd == "windowclose":
+        wid = args[-1]
+        if wid not in state["windows"]:
+            save(state)
+            return 1
+        del state["windows"][wid]
+        if state.get("active") == wid:
+            state["active"] = next_active(state)
+        save(state)
+        return 0
+
+    if cmd == "windowsize":
+        save(state)
+        return 0
+
+    print(f"fake-kdotool: unknown command {cmd}", file=sys.stderr)
+    save(state)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

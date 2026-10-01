@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=GNU Image Manipulation Program
+Exec=gimp
+GenericName=Image Editor
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=gimp;

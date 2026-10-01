@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=System Settings
+Exec=systemsettings
+GenericName=Settings
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=systemsettings;

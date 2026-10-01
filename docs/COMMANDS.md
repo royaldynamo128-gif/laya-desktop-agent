@@ -29,6 +29,11 @@ The agent supports natural phrasing for a wide variety of desktop actions on Arc
 | "Search YouTube for Linux tutorials" | Open YouTube search results | `xdg-open https://www.youtube.com/...` |
 | "Search Google for Arch Linux" | Open Google search results | `xdg-open https://www.google.com/...` |
 | "Navigate to github.com" | Open GitHub in default browser | `xdg-open https://github.com` |
+| "Open the result" (after a search) | Click the top search result on the current results page | Playwright DOM result selectors (YouTube/Google/DDG), AT-SPI link-role fallback |
+| "Open the first/second result" | Click the Nth search result | DOM selector / link-role elements in visual order |
+| "Play the latest video" (after a YouTube search) | Click the top video result and play it | Same result-click mechanism; context resolves "video" to the search results |
+| "Open it" (right after a search) | Open the search result | Goal-executor context: search context overrides the file reference |
+| "Click the 5x option" | Click a UI control by its label in any app | AT-SPI element discovery + OCR fallback, no hardcoded coordinates |
 
 ## 4. Input & Scrolling
 

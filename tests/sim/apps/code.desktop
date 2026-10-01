@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Visual Studio Code
+Exec=code
+GenericName=Code Editor
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=code;

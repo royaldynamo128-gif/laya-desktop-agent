@@ -15,6 +15,36 @@ from app.ptt_listener import PTTListener
 from core.state import StateManager, AgentState
 
 
+def _uinput_available() -> bool:
+    """Check whether /dev/uinput is usable in this environment."""
+    try:
+        import evdev
+        from evdev import UInput, ecodes
+
+        cap = {
+            ecodes.EV_KEY: [
+                ecodes.KEY_A,
+                ecodes.KEY_LEFTMETA,
+                ecodes.KEY_RIGHTALT,
+                ecodes.KEY_F12,
+            ]
+        }
+        ui = UInput(cap)
+        ui.close()
+        return True
+    except Exception:
+        return False
+
+
+# These tests inject REAL hardware scancodes; they require /dev/uinput access
+# (typically root or an appropriate uinput group). They skip cleanly otherwise
+# and run for real on the target machine.
+pytestmark = pytest.mark.skipif(
+    not _uinput_available(),
+    reason="requires /dev/uinput hardware injection access (run on target machine)",
+)
+
+
 @pytest.fixture(scope="module")
 def virtual_keyboard():
     """Create a virtual hardware keyboard at the kernel evdev level."""

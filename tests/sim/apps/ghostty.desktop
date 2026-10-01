@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ghostty
+Exec=ghostty
+GenericName=Terminal Emulator
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=ghostty;

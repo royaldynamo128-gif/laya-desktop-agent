@@ -62,13 +62,15 @@ class LayaEngine:
         self._router = None
         self._current_device = config.device
         self._last_used_time = 0.0
+        self.fallback_only = False  # True when the model cannot be loaded (heuristic routing only)
 
     @property
     def is_loaded(self) -> bool:
         return self._router is not None
 
     def load(self, device: Optional[str] = None) -> None:
-        """Initialize Laya Router with device specification."""
+        """Initialize Laya Router. Degrades gracefully to heuristic-only mode
+        when the laya package/model is unavailable — never crashes the agent."""
         target_device = device or self.config.device
         if target_device == "auto":
             try:
@@ -93,19 +95,39 @@ class LayaEngine:
             )
             self._current_device = target_device
             self._last_used_time = time.time()
+            self.fallback_only = False
             logger.info("Laya Router initialized in %.2f s on %s", time.perf_counter() - start, target_device)
+        except ImportError as e:
+            # Model package not installed — heuristic routing (honest degradation)
+            self.fallback_only = True
+            self._router = None
+            logger.warning(
+                "Laya router package unavailable (%s). Running with deterministic heuristic routing "
+                "(all capabilities preserved; neural confidence routing disabled).",
+                e,
+            )
         except Exception as e:
             if target_device == "cuda":
                 logger.warning("CUDA initialization failed for Laya (%s). Falling back to CPU...", e)
-                self.load(device="cpu")
+                try:
+                    self.load(device="cpu")
+                    return
+                except Exception:
+                    pass
+                self.fallback_only = True
+                logger.warning("Laya router could not load. Deterministic heuristic routing active.")
             else:
-                logger.error("Failed to load Laya on CPU: %s", e)
-                raise
+                self.fallback_only = True
+                logger.warning("Laya router failed to load on CPU: %s. Heuristic routing active.", e)
 
     def decide(self, user_command: str, context: Optional[Dict[str, Any]] = None) -> LayaDecision:
         """Route and classify user voice command into structured decision in a single forward pass."""
+        if self.fallback_only:
+            return self._heuristic_fallback(user_command, 0.0)
         if not self.is_loaded:
             self.load()
+        if self.fallback_only or not self.is_loaded:
+            return self._heuristic_fallback(user_command, 0.0)
 
         self._last_used_time = time.time()
         start = time.perf_counter()

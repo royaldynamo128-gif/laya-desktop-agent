@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Kate
+Exec=kate
+GenericName=Text Editor
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=kate;

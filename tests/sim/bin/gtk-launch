@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""
+Fake gtk-launch — launches an application by desktop file id.
+Looks up $LAYA_SIM_APPS/<id>.desktop, parses Exec, spawns it detached.
+"""
+import configparser
+import os
+import shlex
+import subprocess
+import sys
+
+
+def find_desktop(desktop_id: str):
+    # Search order: LAYA_SIM_APPS, then every dir in LAYA_DESKTOP_DIRS, then system dirs
+    candidates = []
+    sim = os.environ.get("LAYA_SIM_APPS", "")
+    if sim:
+        candidates.append(sim)
+    candidates += [d for d in os.environ.get("LAYA_DESKTOP_DIRS", "").split(":") if d.strip()]
+    candidates += ["/usr/share/applications", "/var/lib/flatpak/exports/share/applications"]
+    for apps_dir in candidates:
+        if not apps_dir:
+            continue
+        path = os.path.join(apps_dir, desktop_id)
+        if not path.endswith(".desktop"):
+            path += ".desktop"
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def run_exec(exec_cmd: str):
+    # Strip field codes
+    import re
+    s = re.sub(r"@@[a-zA-Z]\s+%[a-zA-Z]\s+@@", "", exec_cmd)
+    s = re.sub(r"%[a-zA-Z]", "", s)
+    tokens = shlex.split(s.strip())
+    while tokens and tokens[-1] == "--":
+        tokens.pop()
+    if not tokens:
+        return 1
+    # Detached launch
+    subprocess.Popen(
+        tokens,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return 0
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        return 1
+    desktop_id = sys.argv[1]
+    path = find_desktop(desktop_id)
+    if not path:
+        print(f"gtk-launch: {desktop_id} not found", file=sys.stderr)
+        return 1
+    cp = configparser.ConfigParser(interpolation=None)
+    cp.read(path)
+    try:
+        exec_cmd = cp["Desktop Entry"].get("Exec", "")
+    except Exception:
+        return 1
+    if not exec_cmd:
+        return 1
+    return run_exec(exec_cmd)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

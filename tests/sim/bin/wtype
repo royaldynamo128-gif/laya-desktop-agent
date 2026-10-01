@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""
+Fake wtype — records synthetic keyboard input events to $INPUT_LOG (JSONL).
+Mirrors wtype CLI: `wtype <text>` types text, `wtype -k <keysym>` presses a key.
+Supports `-M/-m` mod press/release and `-P/-p` delay for full combos.
+"""
+import json
+import os
+import sys
+
+
+def main() -> int:
+    log = os.environ.get("INPUT_LOG", "")
+    args = sys.argv[1:]
+
+    events = []
+    pending = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-k":
+            pending.append({"type": "key", "key": args[i + 1] if i + 1 < len(args) else ""})
+            i += 2
+        elif a == "-M":
+            pending.append({"type": "mod_down", "mod": args[i + 1] if i + 1 < len(args) else ""})
+            i += 2
+        elif a == "-m":
+            pending.append({"type": "mod_up", "mod": args[i + 1] if i + 1 < len(args) else ""})
+            i += 2
+        elif a in ("-P", "-p"):
+            i += 2
+        elif a == "-d":
+            i += 2
+        else:
+            # Plain text argument → text event
+            pending.append({"type": "text", "text": a})
+            i += 1
+
+    if pending:
+        events.append({"tool": "wtype", "events": pending})
+
+    if log and events:
+        with open(log, "a") as f:
+            for e in events:
+                f.write(json.dumps(e) + "\n")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

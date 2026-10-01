@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 import logging
 import os
+import shutil
 import signal
 import sys
 import click
@@ -323,44 +324,65 @@ def doctor():
         f"Shortcut: {cfg.input.shortcut} | Mode: {cfg.input.activation_mode}",
     )
     from app.ptt_listener import PTTListener
-    devs = PTTListener().find_keyboard_devices()
+    devs = PTTListener(
+        shortcut=cfg.input.shortcut,
+        activation_mode=cfg.input.activation_mode,
+    ).find_keyboard_devices()
     table.add_row(
         "Keyboards",
-        f"[green]CONNECTED ({len(devs)} devices)[/green]",
-        ", ".join(d.name[:18] for d in devs[:3]),
+        f"[green]CONNECTED ({len(devs)} devices)[/green]" if devs else "[red]NO EVDEV KEYBOARDS[/red]",
+        ", ".join(d.name[:18] for d in devs[:3]) if devs else "evdev devices need read permission",
     )
+
+    # --- Real subsystem probes (never fake "READY") ---
+    def _probe(import_name: str) -> bool:
+        try:
+            __import__(import_name)
+            return True
+        except Exception:
+            return False
+
+    mic_inputs = 0
+    mic_err = ""
+    try:
+        import sounddevice as sd
+        mic_inputs = sum(1 for d in sd.query_devices() if d.get("max_input_channels", 0) > 0)
+    except Exception as e:
+        mic_err = str(e)[:48]
     table.add_row(
         "Microphone",
-        "[green]AVAILABLE[/green]",
-        f"Sample Rate: {cfg.input.sample_rate}Hz | Channels: {cfg.input.channels}",
+        f"[green]AVAILABLE ({mic_inputs} inputs)[/green]" if mic_inputs else f"[red]UNAVAILABLE[/red]",
+        mic_err or f"Sample Rate: {cfg.input.sample_rate}Hz | Channels: {cfg.input.channels}",
     )
     table.add_row(
         "VAD Engine",
-        "[green]READY[/green]",
+        "[green]READY[/green]" if _probe("webrtcvad") else "[red]MISSING (pip install webrtcvad)[/red]",
         f"WebRTC VAD Aggressiveness: {cfg.input.vad_aggressiveness}",
     )
+    stt_ok = _probe("faster_whisper")
     table.add_row(
         "STT (Whisper)",
-        "[green]READY[/green]",
+        "[green]LIB READY[/green]" if stt_ok else "[red]MISSING (pip install faster-whisper)[/red]",
         f"Model: {cfg.stt.model_size} | Device: {cfg.stt.device} ({cfg.stt.compute_type})",
     )
     table.add_row(
         "Laya Router",
-        "[green]READY[/green]",
+        "[green]LIB READY[/green]" if _probe("laya") else "[yellow]FALLBACK (semantic parser only)[/yellow]",
         f"Model: {cfg.laya.model_id} | Device: {cfg.laya.device}",
     )
+    kd = shutil.which("kdotool") or os.environ.get("KDTOOL_BIN", "")
     table.add_row(
         "Executor & Verifier",
-        "[green]READY[/green]",
-        "kdotool (KWin Wayland), AT-SPI2, AppLauncher",
+        "[green]READY[/green]" if kd and Path(kd).exists() else "[red]KDTOOL NOT FOUND[/red]",
+        f"kdotool: {kd or 'not found'} | AT-SPI2: {'available' if _probe('gi') else 'missing python-gi'}",
     )
     table.add_row(
         "Status Overlay",
-        "[green]READY[/green]",
+        "[green]READY[/green]" if _probe("gi") else "[yellow]GTK4/gi missing — overlay disabled[/yellow]",
         "GTK 4 Layer Shell anchored bottom-right (TOP layer)",
     )
     table.add_row(
-        "VRAM (RTX 3050)",
+        "VRAM",
         f"[{'green' if snap.vram_used_pct < 80 else 'yellow'}]{snap.vram_used_mb:.0f} / {snap.vram_total_mb:.0f} MB ({snap.vram_used_pct:.1f}%)[/]",
         f"Guard: {guard.check_status().value}",
     )

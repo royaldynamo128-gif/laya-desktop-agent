@@ -9,7 +9,11 @@
 The **Laya Desktop Agent** allows natural voice control of your Arch Linux desktop with zero cloud dependency. Every component—speech recognition, decision routing, safety gating, OS execution, state verification, and text-to-speech—runs 100% locally on your machine.
 
 ### Key Pipeline
-$$\text{Microphone} \longrightarrow \text{WebRTC VAD} \longrightarrow \text{Faster-Whisper STT} \longrightarrow \text{Convai Laya Router} \longrightarrow \text{Tool Executor} \longrightarrow \text{State Observer} \longrightarrow \text{Verifier} \longrightarrow \text{Piper TTS}$$
+$$\text{Microphone} \longrightarrow \text{WebRTC VAD} \longrightarrow \text{Faster-Whisper STT} \longrightarrow \text{Semantic Parser} \longrightarrow \text{Goal Planner} \longrightarrow \text{Goal Executor} \overbrace{\longrightarrow}^{\text{per step: observe \to act \to verify \to recover}} \text{Verifier / GoalVerifier} \longrightarrow \text{Piper TTS}$$
+
+**Natural language is understood by a generalized semantic parser (verb frames + coordination analysis), not a command dictionary.** "Open Chrome and Opera" opens two applications; "search for cats and dogs" is one query; "Open Chrome, go to YouTube and search XYZ" inherits the YouTube search engine from the navigation context. The Laya neural router remains available as a fallback/confidence layer and degrades gracefully when the model is absent.
+
+**Search-result chaining works end-to-end**: "Open Chrome, go to YouTube, search for XYZ and open the result" launches the browser, navigates, searches, and clicks the actual top result (Playwright DOM selectors first; on-screen link-role accessibility elements as fallback — never hardcoded coordinates). Right after a search, "open it", "open the video" and "play the latest video" resolve to the search results through execution context, and underspecified requests such as "open these two applications" produce a clarification question instead of a silent failure.
 
 * **Sub-35ms Decision Routing**: Uses Convai Laya (`laya.Router`), a non-autoregressive "System 1" model that evaluates intent, safety tiers, and observation requirements in a single forward pass (~32.89 ms hot-path inference on CUDA).
 * **Strict VRAM Guardrails**: Built for a 6 GB VRAM budget (RTX 3050). The agent never exceeds ~1.3–1.9 GB of VRAM, preserving >4.2 GB of free headroom for your desktop, browser, and games.
@@ -49,21 +53,33 @@ laya-desktop-agent/
 │   ├── manager.py        # Central model manager (LOAD -> WARM -> USE -> IDLE -> UNLOAD)
 │   ├── piper_engine.py   # Piper TTS (CPU ONNX, 0 MiB VRAM)
 │   └── whisper_engine.py # Faster-Whisper STT (small.en CUDA float16 / CPU int8)
-├── tools/                # Controlled desktop tools registry
-│   ├── app_control.py    # open_application, close_application, switch_window
-│   ├── browser_control.py# browser_search (YouTube/Google), browser_navigate
-│   ├── input_control.py  # scroll (up/down), type_text, press_key
+├── tools/                # Controlled desktop tools registry (35+ tools)
+│   ├── app_control.py    # open/close/switch applications & folders
+│   ├── browser_control.py# browser search/navigate/download/click/fill (DOM)
+│   ├── click_control.py  # click_element, select_option, submit, fill_form,
+│   │                     # ui_action (any app verb), wait_action, verify_action
+│   ├── file_control.py   # open/move/copy/rename/delete/compress/extract/find
+│   ├── input_control.py  # scroll, type_text (AT-SPI/wtype/clipboard), key combos
+│   ├── save_control.py   # save-as format conversion (Pillow native + GUI path)
 │   ├── screen_control.py # read_screen (AT-SPI2), take_screenshot (Spectacle)
 │   ├── system_control.py # set_volume, mute_volume, media_control (MPRIS)
 │   └── window_control.py # minimize_window, maximize_window, switch_desktop
 ├── integrations/         # Native OS & Wayland interfaces
-│   ├── atspi_client.py   # Accessibility tree reader via PyGObject
+│   ├── atspi_client.py   # Accessibility tree reader + UI element finder
 │   ├── dbus_client.py    # KDE Plasma notifications and MPRIS media control
 │   ├── flatpak_helper.py # Desktop application indexer and launcher
 │   ├── kdotool_client.py # Wayland window management wrapper
-│   └── playwright_client.py # Browser DOM interaction client
+│   └── playwright_client.py # Browser automation (CDP attach → Chromium → xdg-open)
+├── vision/               # Screen perception
+│   └── screen_analyzer.py# AT-SPI element location + OCR fallback + activation
+├── planning/             # NL understanding & autonomous execution
+│   ├── semantic_parser.py# Generalized verb-frame semantic parser
+│   ├── goal_executor.py  # Per-step observe→act→verify→recover loop
+│   ├── goal_planner.py   # Decomposition, replanning, completeness checks
+│   ├── llm_backend.py    # Rule (parser) / API / auto planner backends
+│   └── execution_memory.py # Step history + referring-expression context
 ├── execution/            # Parameter binder and timeout-managed action executor
-├── verification/         # Desktop state observer, verifier, and recovery manager
+├── verification/         # Cached observer, honest verifier, GoalVerifier, recovery
 ├── safety/               # 3-tier safety policy and global emergency stop latch
 ├── monitoring/           # Real-time NVML VRAM guard, cache reaper, latency tracker
 ├── tests/                # Automated pytest test suite and VRAM stress test
@@ -135,24 +151,29 @@ systemctl --user stop laya-voice-agent.service
 
 ---
 
-## 6. Supported Voice Commands
+## 6. Natural Language Capabilities (generalized — NOT a command list)
 
-| Voice Command | Action Executed | Verification Method |
+The system understands goal-level natural language and derives the steps itself.
+Every action is verified before success is reported; failures recover or fail honestly.
+
+| Example utterance | Agent behavior | Verification |
 |---|---|---|
-| **"Open Chrome"** | Launch or switch to Google Chrome | Asserts Chrome window is active in window stack |
-| **"Open Telegram"** | Launch or switch to Telegram Desktop | Asserts Telegram window is active |
-| **"Close this window"** | Closes currently focused window | Asserts window ID is removed from KWin |
-| **"Switch to Opera"** | Focuses and brings Opera to foreground | Asserts active window matches Opera |
-| **"Scroll down"** | Sends Page_Down scroll event | Tool execution acknowledged |
-| **"Scroll up twice"** | Sends Page_Up scroll event twice | Tool execution acknowledged |
-| **"Search YouTube for Linux tutorials"** | Opens YouTube search in browser | Browser URL navigation |
-| **"Take a screenshot"** | Captures screen via Spectacle | Asserts PNG created in cache, auto-cleaned |
-| **"What is on my screen?"** | Reads active UI text via AT-SPI2 | Extracted structured text spoken via TTS |
-| **"Set volume to 50 percent"** | Sets PipeWire master sink to 50% | PipeWire volume adjusted |
-| **"Mute audio"** | Toggles audio mute | PipeWire mute toggled |
-| **"Minimize this window"** | Minimizes active window | Asserts active window minimized |
-| **"Maximize this window"** | Maximizes active window | Asserts active window maximized |
-| **"Switch to desktop two"** | Switches KDE virtual desktop | Asserts desktop number == 2 |
+| "Open Chrome." / "Can you open Chrome?" / "Launch Chrome for me" | Resolves app from live catalog → launches/switches, unminimizes, focuses | Active window matches target |
+| "Open Chrome and Opera." / "Open Chrome, Steam and Dolphin." | Verb inheritance distributes over the coordinated list; each app opened & verified | All windows open |
+| "Search for cats and dogs." | The conjunction stays INSIDE the query (never split) | Browser title/URL match |
+| "Open Chrome, go to YouTube and search for XYZ." | Navigate → search-engine inherited from YouTube context → results opened | URL contains query on the right engine |
+| "Open Chrome and search for Hello World." | Open + Google search | Verified in browser |
+| "Open Opera and open WhatsApp." | Opera app + web.whatsapp.com | Both verified |
+| "Open Upscayl, add this image, select 5x and proceed." | UI elements located by label via AT-SPI (OCR fallback) and activated | Activation logged + step verified |
+| "Open Steam and open this game." | Referring expression resolved in Steam's UI | Element activation |
+| "Open this image and save it as AVIF." | Native conversion (Pillow) with GUI save-dialog fallback | Output file exists |
+| "Open Chrome, download this file, move it to Downloads, rename it and open it." | Full autonomous chain with referring-expression resolution across steps | Each step verified |
+| "Move this file to Wallpapers." / "Create a folder called Projects." / "Find the largest files." / "Delete junk.txt." | Native filesystem ops (delete requires confirmation) | Filesystem assertions |
+| "Type \"hello world\" and press enter." / "Press control w." | AT-SPI/wtype synthesis, combos, clipboard for long text | Input log + self-verification |
+| "What is on my screen?" / "Take a screenshot" / "Set volume to 50%" / "Mute audio" / "Minimize this window" / "Scroll down twice" / "Switch to desktop two" | Direct capabilities | Verified per action type |
+
+**Novel combinations work without new code** — the parser composes intents dynamically:
+`'Launch Dolphin and open Steam then press escape.'` is a tested acceptance case.
 
 ---
 
@@ -187,24 +208,42 @@ Tested on Arch Linux, AMD Ryzen CPU, NVIDIA RTX 3050 Laptop GPU (6 GB VRAM):
 ## 9. Running Automated Tests
 
 ```bash
-# Run full unit and integration test suite (14/14 passed)
+# Run full unit, integration, and acceptance E2E suite (122 passed)
 bash scripts/test.sh
+# or: .venv/bin/python -m pytest tests/ -q
+
+# Acceptance E2E (real-user scenarios on a hermetic simulated desktop:
+# fake window manager, fake apps, fake browser, fake AT-SPI screen state)
+.venv/bin/python -m pytest tests/test_acceptance_e2e.py -v
 
 # Run 30-cycle VRAM and RAM stress benchmark
 bash scripts/stress_test.sh
 ```
 
 The test suite covers:
+- **Acceptance E2E (40 tests)**: every §22 scenario class — simple/multi-app
+  conjunctions, browser flows, desktop UI automation (Upscayl/Steam workflows),
+  file operations, recovery (injected transient failures, unresolvable apps,
+  time budgets, watchdog cancellation, emergency stop), the voice pipeline
+  (synthetic speech → VAD → STT → goal execution; silence rejection; Whisper
+  hallucination filtering; STT error repair), and latency budgets
+  (time-to-first-action, observation-cache subprocess-count assertion)
 - WebRTC VAD silence filtering and tone detection
-- End-to-end audio -> STT -> Laya -> Executor -> Observer -> Verifier -> TTS pipeline
-- Kernel evdev Push-to-Talk and Emergency Stop lifecycle
+- End-to-end audio -> STT -> parser -> planner -> executor -> observer ->
+  verifier -> TTS pipeline
+- Kernel evdev Push-to-Talk and Emergency Stop lifecycle (skips cleanly
+  without /dev/uinput; runs for real on the target machine)
 - KDE Plasma 6 Wayland `kdotool` window search, activation, and desktop switching
-- Laya decision routing and parameter binding (including folder opening and category window switching)
-- 3-tier safety policy enforcement
+- Semantic parser clause segmentation, verb inheritance, query protection
+- 3-tier safety policy enforcement (file deletion gated)
 - Single-instance `fcntl.flock` daemon locking
 - Controlled tool registry execution
 - Native AT-SPI2 keyboard/mouse input synthesis and wtype fallback
 - NVML VRAM Guard 3-tier status transitions and emergency callbacks
+
+All tests are **hermetic**: they run against the simulated desktop in
+`tests/sim/` (fake window manager, applications, browser, and accessibility
+screen state) — no dependency on the host's installed apps or hardware.
 
 ---
 

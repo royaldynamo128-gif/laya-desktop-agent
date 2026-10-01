@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Opera
+Exec=opera
+GenericName=Web Browser
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=opera;

@@ -125,6 +125,10 @@ class CommandLifecycle:
         self._watchdog_timer: Optional[threading.Timer] = None
         self._watchdog_lock = threading.RLock()
         self._is_finalized = False
+        self._watchdog_timeout_sec: float = 0.0
+        self._on_watchdog_timeout: Optional[Callable[["CommandLifecycle"], None]] = None
+        self.cancel_requested = False  # cooperative cancellation flag
+        self.progress_stage: Optional[str] = None  # last observed useful-work marker
 
     @property
     def total_elapsed_ms(self) -> float:
@@ -182,27 +186,56 @@ class CommandLifecycle:
             self.stop_watchdog()
             if self._is_finalized:
                 return
+            self._watchdog_timeout_sec = timeout_sec
+            self._on_watchdog_timeout = on_timeout
+            self._arm_watchdog()
 
-            def _fire():
-                with self._watchdog_lock:
-                    if not self._is_finalized:
-                        logger.error(
-                            "[%s] COMMAND WATCHDOG EXPIRED after %.1fs! Stuck at stage: %s",
-                            self.command_id,
-                            timeout_sec,
-                            self.current_stage.value,
-                        )
-                        self.error_message = f"Command timed out after {timeout_sec:.1f}s at stage: {self.current_stage.value}"
-                        self.transition(CommandStage.TIMEOUT, detail=self.error_message)
-                        try:
-                            on_timeout(self)
-                        except Exception as e:
-                            logger.error("[%s] Error in watchdog on_timeout callback: %s", self.command_id, e)
+    def _arm_watchdog(self) -> None:
+        """(Re)arm the watchdog timer with the full budget. Internal."""
+        timeout_sec = self._watchdog_timeout_sec
 
-            self._watchdog_timer = threading.Timer(timeout_sec, _fire)
-            self._watchdog_timer.daemon = True
-            self._watchdog_timer.name = f"Watchdog-{self.command_id}"
-            self._watchdog_timer.start()
+        def _fire():
+            with self._watchdog_lock:
+                if self._is_finalized or self._watchdog_timer is None:
+                    return
+                logger.error(
+                    "[%s] COMMAND WATCHDOG EXPIRED after %.1fs! Stuck at stage: %s",
+                    self.command_id,
+                    timeout_sec,
+                    self.current_stage.value,
+                )
+                self.error_message = f"Command timed out after {timeout_sec:.1f}s at stage: {self.current_stage.value}"
+                self.cancel_requested = True  # cooperative cancellation for all loops
+                self.transition(CommandStage.TIMEOUT, detail=self.error_message)
+                try:
+                    if self._on_watchdog_timeout:
+                        self._on_watchdog_timeout(self)
+                except Exception as e:
+                    logger.error("[%s] Error in watchdog on_timeout callback: %s", self.command_id, e)
+
+        self._watchdog_timer = threading.Timer(timeout_sec, _fire)
+        self._watchdog_timer.daemon = True
+        self._watchdog_timer.name = f"Watchdog-{self.command_id}"
+        self._watchdog_timer.start()
+
+    def ping_watchdog(self, extra_sec: Optional[float] = None) -> None:
+        """
+        Report progress: useful work just completed. Re-arms the watchdog
+        (optionally with an extended budget) so long multi-step goals are not
+        killed while they are demonstrably making progress.
+        """
+        with self._watchdog_lock:
+            if self._is_finalized or self._watchdog_timer is None:
+                return
+            if extra_sec:
+                self._watchdog_timeout_sec = max(self._watchdog_timeout_sec, extra_sec)
+            self._watchdog_timer.cancel()
+            self._arm_watchdog()
+
+    def request_cancel(self, reason: str = "User cancelled") -> None:
+        """Cooperatively request cancellation; execution loops check this flag."""
+        self.cancel_requested = True
+        logger.info("[%s] Cancellation requested: %s", self.command_id, reason)
 
     def stop_watchdog(self) -> None:
         """Cancel active watchdog timer."""
@@ -219,6 +252,7 @@ class CommandLifecycle:
         self.transition(CommandStage.FAILED, detail=reason)
 
     def cancel(self, reason: str = "User cancelled") -> None:
+        self.cancel_requested = True
         self.transition(CommandStage.CANCELLED, detail=reason)
 
     def to_diagnostic_dict(self) -> Dict[str, Any]:

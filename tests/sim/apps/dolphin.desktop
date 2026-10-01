@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Dolphin
+Exec=dolphin
+GenericName=File Manager
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=dolphin;

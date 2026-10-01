@@ -1,0 +1,140 @@
+{
+  "report_version": "1.0",
+  "generated": "2026-10-02T00:00:00+08:00",
+  "project": "laya-desktop-agent",
+  "final_status": "PASS",
+  "summary": {
+    "tests_collected": 155,
+    "tests_passed": 150,
+    "tests_skipped": 5,
+    "tests_failed": 0,
+    "skip_reason": "evdev/uinput physical keyboard tests require real hardware (not present in the verification sandbox); they skip cleanly and are verified by PTTListener unit-level event simulation"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "test_runner": "pytest 9.0.2",
+    "desktop": "hermetic simulated desktop (tests/sim): fake kdotool window manager with window lifecycle/focus/desktops/minimize/failure-injection, 18 fake .desktop applications, fake wtype/xdg-open/gtk-launch, FakeAtspi accessibility screen state with activation logging",
+    "not_available_in_sandbox": [
+      "KDE Plasma / Wayland (real)",
+      "evdev physical keyboards",
+      "microphone / PipeWire",
+      "NVIDIA GPU / NVML",
+      "python-gi (real AT-SPI2 / DBus / GTK overlay)",
+      "Convai Laya neural model",
+      "Playwright browsers"
+    ]
+  },
+  "features_tested": {
+    "startup_shutdown_restart": "test_daemon_start_stop_restart — real start() main loop, command execution during loop, clean stop(), clean restart",
+    "configuration": "all 3 profiles (low_resource/balanced/performance) load; config values verified wired into PTT listener",
+    "voice_pipeline": "audio -> VAD -> STT (stubbed) -> normalization -> hallucination filter -> routing -> execution; silence rejection; STT error repair; compound spoken commands",
+    "natural_language_understanding": "politeness variants ('Can you open Chrome?', 'Launch Chrome for me'), conjunction distribution (2- and 3-app), quoted-query protection, 'Start X, then open Y', alternative app names ('Google Chrome' / 'the browser'), category fallbacks, novel phrase shapes",
+    "task_planning_execution": "compound goals decomposed to per-step observe->act->verify->recover loops; goal time budget; replan with genuine method variation; no coordinator re-entry",
+    "multi_step_execution": "'Open Chrome, go to YouTube, search for XYZ and open the result' -> 4 verified steps ending in the correct result link click; download->rename->move->open chains",
+    "application_discovery": "already-running (focus not duplicate), minimized (restored), other-workspace (desktop switch), multiple matches (clarification), unresolvable (honest fast failure), token-fuzzy matching",
+    "desktop_control": "mouse/keyboard synthesis via wtype log verification; key combos (ctrl+w); type text; scroll; press keys",
+    "application_switching_window_management": "close/minimize/maximize/switch verified against window state; focus transfer checks",
+    "screenshots_vision_ocr": "screenshot tool; screen analyzer element discovery (AT-SPI primary; OCR fallback path unit-tested)",
+    "accessibility": "element discovery by label (exact/fuzzy/token-subset), role-based link discovery, activation logging, editable-field detection",
+    "browser_automation": "navigate/search (engine inheritance from YouTube context), URL normalization, result clicking (DOM tier + AT-SPI link-role tier), download (native urllib), DOM click/fill clients",
+    "filesystem_operations": "open/move/copy/rename/delete (confirmation-gated)/create-folder/compress/extract/find-largest; deterministic newest-file resolution",
+    "error_recovery": "transient kdotool failures (KDOTOOL_FAIL_N), window vanishing mid-goal, slow page loads, unresolvable apps, garbage/empty transcription, kdotool unavailable — all end with recovery or an honest failure, never a hang",
+    "timeouts_cancellation": "watchdog timeout (adaptive 45s compound / 20s single), goal time budget, emergency stop (F11 handler) aborts goals, no double-execution after watchdog timeout",
+    "state_management": "task memory per goal; no stale state between commands; idempotent repeated commands (no duplicate windows)",
+    "logging_metrics": "per-stage durations recorded (vad/stt/routing/execution/verification/recovery/goal_execution/tts); honest compound-goal total_ms; resource snapshot; metrics.jsonl",
+    "cli": "doctor (real probes), status, exec (full daemon + command), run; verified both in-process (CliRunner) and as a real subprocess"
+  },
+  "shortcuts_tested": {
+    "WIN+ALT global PTT combo": "parsed from config; full key-event simulation triggers press/release callbacks; partial combos rejected; right-variant keys accepted; hybrid tap-vs-hold verified (existing suite)",
+    "F12 PTT fallback key": "parsed and armed (config input.ptt_key)",
+    "F11 emergency stop": "key parsed; daemon handler aborts running goal, sets PAUSED, notifies",
+    "CLI activate/stop": "SIGUSR1/SIGTERM wiring verified via command implementation review + CLI execution",
+    "ctrl+w and app key combos": "executed through input synthesis, verified in wtype input log",
+    "config wiring": "daemon constructs PTTListener with config shortcut/mode/keys — asserted"
+  },
+  "bugs_discovered_and_fixed_this_round": [
+    {
+      "id": "R3-01",
+      "severity": "critical-packaging",
+      "symptom": "pip install of the project would omit the planning package (semantic parser, goal executor, planner) -> ImportError at daemon startup",
+      "fix": "added planning* to pyproject packages.find include"
+    },
+    {
+      "id": "R3-02",
+      "severity": "critical-functionality",
+      "symptom": "'open the result' after a search tried to open an application named 'result'; goal burned all replans on garbage rescue plans and failed",
+      "fix": "semantic parser result-reference frames; goal-executor search-context resolution ('open it'/'the video'/'play the latest video' after a search); ClickElementTool result orchestration (DOM tier then AT-SPI link tier); BrowserClient.click_first_result with engine-aware selectors; role-based link discovery in AT-SPI clients"
+    },
+    {
+      "id": "R3-03",
+      "severity": "major",
+      "symptom": "result click picked the navigation link 'Home' instead of the actual search result",
+      "fix": "rank candidate links by query-token overlap, below-search-field position, and label length before visual order"
+    },
+    {
+      "id": "R3-04",
+      "severity": "major",
+      "symptom": "compound goals reported total_ms = 0 (fake latency data) in CLI output and metrics.jsonl",
+      "fix": "goal execution wrapped in tracker.measure('goal_execution'); RAM/VRAM snapshot recorded at finalization"
+    },
+    {
+      "id": "R3-05",
+      "severity": "moderate",
+      "symptom": "'open these two applications' failed as an unresolvable app name with no guidance",
+      "fix": "plural/referring application requests now produce a clarification question via the clarify tool"
+    },
+    {
+      "id": "R3-06",
+      "severity": "moderate-flakiness",
+      "symptom": "'move this file' occasionally moved the wrong file: newest-file tie-breaking depended on filesystem iteration order when mtimes tied",
+      "fix": "deterministic (mtime_ns, ctime_ns, path) ordering key in FileResolver._newest_file; test data timestamps made unambiguous"
+    },
+    {
+      "id": "R3-07",
+      "severity": "moderate",
+      "symptom": "CLI doctor displayed fake READY states for microphone/VAD/STT/kdotool/overlay without probing them",
+      "fix": "doctor now performs real import/device probes and reports honest states (e.g. 'KDTOOL NOT FOUND', 'FALLBACK (semantic parser only)')"
+    },
+    {
+      "id": "R3-08",
+      "severity": "minor",
+      "symptom": "doctor built PTTListener with default values instead of the configured shortcut/mode",
+      "fix": "config values passed through"
+    },
+    {
+      "id": "R3-09",
+      "severity": "minor",
+      "symptom": "dead empty speech/ package shipped in the repo and pyproject",
+      "fix": "removed package and packaging entry"
+    },
+    {
+      "id": "R3-10",
+      "severity": "refactor",
+      "symptom": "overlay spawn logic duplicated inline in daemon start() and the main loop, untestable without patching the global subprocess module",
+      "fix": "extracted _spawn_overlay(); enables hermetic lifecycle testing"
+    },
+    {
+      "id": "R3-11",
+      "severity": "minor",
+      "symptom": "missing shutil import in app/cli.py (introduced during doctor repair) crashed the doctor command",
+      "fix": "import added; verified by real CLI subprocess execution"
+    }
+  ],
+  "prior_round_bugs": "38 architectural defects found in the original audit (double-execution race, ThreadPoolExecutor watchdog deadlock, fake verifiers, fake method-switching, dead GoalVerifier, missing file/vision/browser-DOM capabilities, per-command cache reaping, observation duplication, hardcoded paths, non-hermetic tests, and more) — all repaired in the previous engineering round; see worklog.md Task 2 for the complete list",
+  "regression_results": {
+    "final_run": "150 passed, 5 skipped, 0 failed (2 min 02 s)",
+    "baseline_at_session_start": "122 passed, 5 skipped",
+    "delta": "+28 adversarial round-2 tests, all passing; no existing test regressed"
+  },
+  "external_limitations": [
+    "Real-hardware evdev tests (5) require a physical keyboard with uinput access; they skip in the sandbox and are covered by simulated key-event tests",
+    "First-run Whisper model load downloads from HuggingFace when the model is not cached locally (requires network once)",
+    "'Play the latest video' maps to the top-relevance result; true upload-date sorting would require interacting with the site's filter UI",
+    "Search-result clicking requires either Playwright (DOM tier) or a browser exposing an accessibility tree (AT-SPI tier); with xdg-open only, Laya reports an honest failure instead of guessing",
+    "The laya neural router runs in parser-only fallback when the Convai model is unavailable (by design, honest degradation)"
+  ],
+  "packaging": {
+    "zip": "laya-desktop-agent-main.zip",
+    "verified": "extracted into a clean directory and the complete test suite re-run from the extracted copy (results identical), CLI exec verified from the extracted copy"
+  }
+}

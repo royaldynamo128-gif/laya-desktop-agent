@@ -55,15 +55,22 @@ class ActionExecutor:
         start = time.perf_counter()
         logger.info("Executing tool [%s] with arguments: %s", action.tool_name, action.arguments)
 
+        # Inject emergency-stop handle so long poll loops inside tools can abort
+        exec_args = dict(action.arguments)
+        exec_args.setdefault("_emergency_stop", self.emergency_stop)
+
         try:
-            future = self._executor.submit(tool.execute, **action.arguments)
+            future = self._executor.submit(tool.execute, **exec_args)
             result = future.result(timeout=self.config.execution_timeout_sec)
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             logger.info("Tool [%s] finished in %.1f ms | Success: %s", action.tool_name, elapsed_ms, result.success)
             return result
         except concurrent.futures.TimeoutError:
+            # Do NOT wait for the stuck tool thread: abandon it (daemon pool)
             msg = f"Tool execution timed out after {self.config.execution_timeout_sec}s."
             logger.error(msg)
+            self._executor.shutdown(wait=False)
+            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="ToolExec")
             return ToolResult(success=False, message=msg, error="Timeout")
         except Exception as e:
             msg = f"Tool execution error: {e}"

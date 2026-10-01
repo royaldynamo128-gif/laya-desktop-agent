@@ -9,7 +9,7 @@ import time
 from typing import Any, Dict, List, Optional, Set
 from planning.method_registry import ActionMethod
 from tools.base import ToolResult
-from verification.verifier import VerificationResult
+from verification.verifier import VerificationResult  # noqa: F401  (re-export; runtime-safe via deferred import)
 
 
 @dataclass

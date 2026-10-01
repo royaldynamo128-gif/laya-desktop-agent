@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Telegram Desktop
+Exec=telegram
+GenericName=Chat Client
+Comment=Simulated application for hermetic testing
+Categories=Utility;
+Keywords=telegram-desktop;

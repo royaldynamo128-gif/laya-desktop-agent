@@ -14,6 +14,7 @@ import re
 import urllib.request
 from typing import Any, Dict, List, Optional
 from planning.execution_memory import ActionStep, GoalPlan
+from planning.semantic_parser import Clause, ParseResult, SemanticParser, get_parser
 
 logger = logging.getLogger(__name__)
 
@@ -62,41 +63,33 @@ class LLMBackend(ABC):
 class RuleBasedPlannerBackend(LLMBackend):
     """
     High-speed deterministic goal decomposition engine.
-    Analyzes natural speech connectors ('and', 'then', 'after that', ';', ',')
-    and common computer operation patterns.
+    Uses the generalized SemanticParser: verb-anchored clause segmentation,
+    verb inheritance for coordinated lists, and slot-based verb frames.
+    No hardcoded command dictionary.
     """
 
-    # Common multi-action connector patterns
+    # Back-compat: some modules import this for compound detection
     SPLIT_REGEX = re.compile(
         r"\b(?:and then|then|after that|and also|and)\b|;|, and|,",
         re.IGNORECASE,
     )
 
+    def __init__(self, parser: Optional[SemanticParser] = None):
+        self.parser = parser or get_parser()
+
     def plan_goal(self, goal: str, context: Dict[str, Any]) -> GoalPlan:
         raw = goal.strip()
         goal_id = f"plan-{abs(hash(raw)) % 100000:05d}"
 
-        # 1. Single action check
-        clauses = self._split_clauses(raw)
-        if len(clauses) <= 1:
-            step = self._clause_to_step(1, raw, is_terminal=True)
-            return GoalPlan(
-                goal_id=goal_id,
-                original_goal=raw,
-                steps=[step],
-                is_single_action=True,
-                context_notes="Single-action direct execution",
-            )
+        parsed: ParseResult = self.parser.parse(raw)
 
-        # 2. Multi-step decomposition
         steps: List[ActionStep] = []
-        for i, clause in enumerate(clauses, start=1):
-            is_last = (i == len(clauses))
-            step = self._clause_to_step(i, clause, is_terminal=is_last)
-            steps.append(step)
+        for i, clause in enumerate(parsed.clauses, start=1):
+            is_last = i == len(parsed.clauses)
+            steps.append(self._clause_to_step(i, clause, is_terminal=is_last))
 
         logger.info(
-            "RuleBasedPlanner decomposed goal '%s' into %d steps: %s",
+            "Planner decomposed goal '%s' into %d steps: %s",
             raw,
             len(steps),
             [s.description for s in steps],
@@ -106,7 +99,7 @@ class RuleBasedPlannerBackend(LLMBackend):
             goal_id=goal_id,
             original_goal=raw,
             steps=steps,
-            is_single_action=False,
+            is_single_action=len(steps) <= 1,
             context_notes=f"Decomposed into {len(steps)} sub-actions",
         )
 
@@ -114,143 +107,60 @@ class RuleBasedPlannerBackend(LLMBackend):
         self, goal: str, completed_steps: List[str], current_state: Dict[str, Any]
     ) -> bool:
         """Heuristic goal completeness check."""
-        clauses = self._split_clauses(goal)
-        # If all clauses have a corresponding completed step, consider complete
-        return len(completed_steps) >= len(clauses)
+        parsed = self.parser.parse(goal)
+        return len(completed_steps) >= len(parsed.clauses)
 
-    def _split_clauses(self, text: str) -> List[str]:
-        # Handle "Open X and write/type Y"
-        # Protect specific quoted strings or URLs
-        parts = [p.strip() for p in self.SPLIT_REGEX.split(text) if p.strip()]
-        return parts if parts else [text]
+    def _clause_to_step(self, step_id: int, clause: Clause, is_terminal: bool = False) -> ActionStep:
+        c = clause
+        target = c.target or ""
+        args = dict(c.arguments)
+        if c.is_referring:
+            args["_referring"] = target
 
-    def _clause_to_step(self, step_id: int, clause: str, is_terminal: bool = False) -> ActionStep:
-        c = clause.strip()
-        lower = c.lower()
+        # Step description in natural language for logging / replanning
+        if c.intent in ("unknown",):
+            description = c.raw or target
+        else:
+            description = f"{c.verb or c.intent} {target}".strip()
 
-        # Heuristic intent matching
-        if lower.startswith(("open ", "launch ", "start ")):
-            target = re.sub(r"^(open|launch|start)\s+", "", c, flags=re.IGNORECASE).strip()
-            return ActionStep(
-                step_id=step_id,
-                description=f"Open {target}",
-                intent_hint="open_application",
-                target=target,
-                arguments={"app_name": target},
-                verification_criteria=f"Application {target} is running and visible",
-                is_terminal=is_terminal,
-            )
+        verification = self._verification_criteria(c)
 
-        if lower.startswith(("close ", "quit ", "exit ")):
-            target = re.sub(r"^(close|quit|exit)\s+", "", c, flags=re.IGNORECASE).strip()
-            return ActionStep(
-                step_id=step_id,
-                description=f"Close {target}",
-                intent_hint="close_application",
-                target=target,
-                arguments={"query": target},
-                verification_criteria=f"Application {target} window is closed",
-                is_terminal=is_terminal,
-            )
-
-        if lower.startswith(("switch to ", "focus ", "bring up ", "switch ")):
-            target = re.sub(r"^(switch to|focus|bring up|switch)\s+", "", c, flags=re.IGNORECASE).strip()
-            return ActionStep(
-                step_id=step_id,
-                description=f"Switch to {target}",
-                intent_hint="switch_window",
-                target=target,
-                arguments={"query": target},
-                verification_criteria=f"Window {target} is focused",
-                is_terminal=is_terminal,
-            )
-
-        if lower.startswith(("type ", "write ", "enter text ", "enter ")):
-            text_to_type = re.sub(r"^(type|write|enter text|enter)\s+", "", c, flags=re.IGNORECASE).strip()
-            # Strip outer quotes if present
-            if (text_to_type.startswith('"') and text_to_type.endswith('"')) or (
-                text_to_type.startswith("'") and text_to_type.endswith("'")
-            ):
-                text_to_type = text_to_type[1:-1]
-            return ActionStep(
-                step_id=step_id,
-                description=f"Type '{text_to_type}'",
-                intent_hint="type_text",
-                target=text_to_type,
-                arguments={"text": text_to_type},
-                verification_criteria=f"Text '{text_to_type}' entered",
-                is_terminal=is_terminal,
-            )
-
-        if lower.startswith(("press ", "hit ", "key ")):
-            key = re.sub(r"^(press|hit|key)\s+", "", c, flags=re.IGNORECASE).strip()
-            return ActionStep(
-                step_id=step_id,
-                description=f"Press key {key}",
-                intent_hint="press_key",
-                target=key,
-                arguments={"key": key},
-                verification_criteria=f"Key {key} pressed",
-                is_terminal=is_terminal,
-            )
-
-        if lower.startswith(("go to ", "visit ", "navigate to ")):
-            url = re.sub(r"^(go to|visit|navigate to)\s+", "", c, flags=re.IGNORECASE).strip()
-            return ActionStep(
-                step_id=step_id,
-                description=f"Navigate to {url}",
-                intent_hint="browser_navigate",
-                target=url,
-                arguments={"url": url},
-                verification_criteria=f"Browser navigated to {url}",
-                is_terminal=is_terminal,
-            )
-
-        if lower.startswith(("search for ", "search ")):
-            query = re.sub(r"^(search for|search)\s+", "", c, flags=re.IGNORECASE).strip()
-            return ActionStep(
-                step_id=step_id,
-                description=f"Search for '{query}'",
-                intent_hint="browser_search",
-                target=query,
-                arguments={"query": query, "engine": "google"},
-                verification_criteria=f"Search performed for '{query}'",
-                is_terminal=is_terminal,
-            )
-
-        if "screenshot" in lower:
-            return ActionStep(
-                step_id=step_id,
-                description="Take screenshot",
-                intent_hint="take_screenshot",
-                target="screen",
-                arguments={},
-                verification_criteria="Screenshot captured",
-                is_terminal=is_terminal,
-            )
-
-        if lower.startswith("scroll"):
-            direction = "down" if "down" in lower else ("up" if "up" in lower else "down")
-            return ActionStep(
-                step_id=step_id,
-                description=f"Scroll {direction}",
-                intent_hint="scroll",
-                target=direction,
-                arguments={"direction": direction},
-                verification_criteria=f"Scrolled {direction}",
-                is_terminal=is_terminal,
-            )
-
-        # Fallback generic step
         return ActionStep(
             step_id=step_id,
-            description=c,
-            intent_hint="",
-            target=c,
-            arguments={"command": c},
-            verification_criteria=f"Action '{c}' performed",
+            description=description,
+            intent_hint=c.intent,
+            target=target,
+            arguments=args,
+            verification_criteria=verification,
             is_terminal=is_terminal,
         )
+
+    def _verification_criteria(self, clause: Clause) -> str:
+        intent = clause.intent
+        target = clause.target
+        checks = {
+            "open_application": f"Application {target} is running and focused",
+            "close_application": f"Window for {target or 'active application'} is closed",
+            "switch_window": f"Window {target} is focused",
+            "browser_navigate": f"Browser shows {target}",
+            "browser_search": f"Search results for '{target}' are displayed",
+            "type_text": f"Text '{target}' was entered",
+            "press_key": f"Key {target} was pressed",
+            "click_element": f"Element '{target}' was activated",
+            "submit_action": f"Submit control '{target}' was activated",
+            "ui_action": f"UI action '{clause.verb} {target}' completed",
+            "take_screenshot": "Screenshot captured",
+            "read_screen": "Screen text extracted",
+            "file_move": f"File moved to {clause.arguments.get('destination', 'destination')}",
+            "file_rename": f"File renamed to {clause.arguments.get('new_name', 'new name')}",
+            "file_delete": f"Files deleted",
+            "file_create_folder": f"Folder {target} exists",
+            "save_as": f"File saved as {clause.arguments.get('format') or 'new format'}",
+            "download_action": f"File downloaded to Downloads",
+            "wait_action": f"Condition '{target}' satisfied",
+            "verify_action": f"'{target}' verified on screen",
+        }
+        return checks.get(intent, f"Action '{clause.raw or target}' performed")
 
 
 class APILLMBackend(LLMBackend):
